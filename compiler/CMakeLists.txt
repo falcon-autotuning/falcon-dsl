@@ -41,13 +41,7 @@ target_include_directories(falcon-atc-core
     $<INSTALL_INTERFACE:include>
 )
 target_link_libraries(falcon-atc-core PUBLIC nlohmann_json::nlohmann_json)
-
-# Suppress warnings from generated code
-if(MSVC)
-  target_compile_options(falcon-atc-core PRIVATE /W0)
-else()
-  target_compile_options(falcon-atc-core PRIVATE -w)
-endif()
+target_compile_options(falcon-atc-core PRIVATE -w)
 
 # Make sure generated files are built first
 set_source_files_properties(

@@ -15,7 +15,6 @@ A domain-specific language and runtime for defining and executing **quantum devi
 - [CLI: `falcon-run`](#cli-falcon-run)
 - [CLI: `falcon-test`](#cli-falcon-test)
 - [Package Manager (`falcon-pm`)](#package-manager-falcon-pm)
-- [Language Server (falcon-lsp)](#language-server-falcon-lsp)
 - [Documentation Index](#documentation-index)
 - [Testing](#testing)
 - [License](#license)
@@ -57,8 +56,6 @@ autotuner ChargeStability (float gate_voltage, int sweep_steps) -> (bool stable)
 |-----------|-------------|
 | `falcon-dsl` | Core runtime library: interpreter, autotuner engine, type system |
 | `falcon-atc` | Compiler sub-library: lexer, parser, AST (internal) |
-| `falcon-pm` | Package manager: resolves `import` paths, handles manifests |
-| `falcon-lsp` | Language server: IDE integration for `.fal` files |
 | `falcon-run` | CLI tool: run any autotuner from the command line |
 | `falcon-test` | CLI tool: fixture-aware test runner for `.fal` test suites |
 
@@ -528,73 +525,10 @@ See [docs/PACKAGE_MANAGER.md](docs/PACKAGE_MANAGER.md) for the full guide.
 
 ---
 
-## Language Server (`falcon-lsp`)
-
-`falcon-lsp` provides IDE integration for `.fal` files via the Language Server Protocol.
-
-### Features
-
-- Syntax error diagnostics
-- Completion for state names, parameters, keywords, and generic type parameters
-- Go-to-definition for states, routines, and struct types
-- Hover documentation
-- Rename refactoring
-
-### Installation
-
-```bash
-make install-lsp
-# Installs falcon-lsp to /opt/falcon/lib/falcon-lsp
-```
-
-### Editor setup
-
-**VS Code** — install the `falcon-dsl` VS Code extension (searches the marketplace for `falcon-lsp`).
-
-**Neovim (nvim-lspconfig)**:
-
-```lua
-local lspconfig = require('lspconfig')
-lspconfig.falcon_lsp.setup {
-  cmd = { '/opt/falcon/lib/falcon-lsp' },
-  filetypes = { 'fal' },
-  root_dir = lspconfig.util.root_pattern('falcon.yml', '.git'),
-}
-```
-
-A ready-made lazy.nvim snippet is at `dsl/lsp/neovim/init.lua`.
-
-See [docs/LSP.md](docs/LSP.md) for setup guides for all major editors.
-
----
-
-## Documentation Index
-
-| Document | Description |
-|----------|-------------|
-| [docs/LANGUAGE_REFERENCE.md](docs/LANGUAGE_REFERENCE.md) | Complete `.fal` syntax and language reference |
-| [docs/TUTORIAL.md](docs/TUTORIAL.md) | Step-by-step tutorial: build your first autotuner |
-| [docs/CLI.md](docs/CLI.md) | `falcon-run` and `falcon-test` CLI reference |
-| [docs/LSP.md](docs/LSP.md) | Language server setup for all editors |
-| [docs/PACKAGE_MANAGER.md](docs/PACKAGE_MANAGER.md) | Package manager guide |
-| [libs/testing/README.md](../libs/testing/README.md) | Testing library: `TestContext`, `TestRunner`, fixture patterns |
-
----
-
 ## Testing
 
 ```bash
-# All tests (requires Docker for PostgreSQL + NATS)
 make test
-
-# Without Docker (services must be running externally)
-export TEST_DATABASE_URL=postgresql://falcon_test:falcon_test_password@127.0.0.1:5433/falcon_test
-export TEST_NATS_URL=nats://localhost:4222
-make test-local
-
-# Run the Falcon DSL self-tests with falcon-test
-falcon-test libs/testing/tests/run_tests.fal
-falcon-test libs/testing/tests/error_detection.fal || true  # failures expected
 ```
 
 ---

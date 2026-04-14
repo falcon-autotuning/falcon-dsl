@@ -22,13 +22,33 @@ ifeq ($(OS),Windows_NT)
 SUDO := 
 endif
 
-# Paths
+ENV_FILE := .nuget-credentials
+ifeq ($(wildcard $(ENV_FILE)),)
+  $(info [Makefile] $(ENV_FILE) not found, skipping environment sourcing)
+else
+  include $(ENV_FILE)
+  export $(shell sed 's/=.*//' $(ENV_FILE) | xargs)
+  $(info [Makefile] Loaded environment from $(ENV_FILE))
+endif
+# ── Paths ─────────────────────────────────────────────────────────────────────
 VCPKG_ROOT ?= $(CURDIR)/vcpkg
 VCPKG_TOOLCHAIN ?= $(VCPKG_ROOT)/scripts/buildsystems/vcpkg.cmake
 VCPKG_INSTALLED_DIR ?= $(CURDIR)/vcpkg_installed
-NUGET_FEED_URL ?= https://pkgs.dev.azure.com/falcon-autotuning/_packaging/cpp-cache/nuget/v3/index.json
-NUGET_FEED ?= $(NUGET_FEED_URL)
-VCPKG_BINARY_SOURCES ?= nuget,$(NUGET_FEED),readwrite
+FEED_URL ?= 
+NUGET_API_KEY ?=
+FEED_NAME ?= 
+USERNAME ?=
+VCPKG_BINARY_SOURCES ?= ""
+ifeq ($(strip $(FEED_URL)),)
+  CMAKE_VCPKG_BINARY_SOURCES :=
+else
+	VCPKG_BINARY_SOURCES := "clear;nuget,$(FEED_URL),readwrite"
+  CMAKE_VCPKG_BINARY_SOURCES := -DVCPKG_BINARY_SOURCES=$(VCPKG_BINARY_SOURCES)
+endif
+LINKER_FLAGS ?=
+ifeq ($(PLATFORM),linux)
+	LINKER_FLAGS := -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld"
+endif
 
 BUILD_DIR_DEBUG := build/debug
 BUILD_DIR_RELEASE := build/release
@@ -79,23 +99,28 @@ vcpkg-bootstrap:
 		cd $(VCPKG_ROOT) && ./bootstrap-vcpkg.sh; \
 	fi
 
+setup-nuget-auth:
+	@if [ -z "$$NUGET_API_KEY" ]; then \
+		echo "No NUGET_API_KEY found, skipping NuGet setup (local-only build, no binary cache)."; \
+		exit 0; \
+	fi
+	@echo "Setting up NuGet authentication for vcpkg binary caching..."
+	@if ! command -v mono >/dev/null 2>&1; then \
+		echo "Error: mono is not installed. Please install mono (e.g., 'sudo pacman -S mono' on Arch, 'sudo apt install mono-complete' on Ubuntu)."; \
+		exit 1; \
+	fi
+	@NUGET_EXE=$$(vcpkg fetch nuget | tail -n1); \
+	mono "$$NUGET_EXE" sources remove -Name "$(FEED_NAME)" || true; \
+	mono "$$NUGET_EXE" sources add -Name "$(FEED_NAME)" -Source "$(FEED_URL)" -Username "$(USERNAME)" -Password "$(NUGET_API_KEY)"
+
 .PHONY: vcpkg-install-deps
-vcpkg-install-deps:
+vcpkg-install-deps: setup-nuget-auth 
 	@echo "Installing vcpkg dependencies" 
-	@API_KEY=$$(if [ -f .nuget_api_key ]; then cat .nuget_api_key; else echo $$NUGET_API_KEY; fi); \
-	if [ ! -z "$$API_KEY" ] && [ ! -z "$(NUGET_FEED)" ]; then \
-		echo "Generating temporary nuget.config for binary caching..."; \
-		printf '<?xml version="1.0" encoding="utf-8"?>\n<configuration>\n  <config>\n    <add key="defaultPushSource" value="cpp-cache" />\n  </config>\n  <packageSources>\n    <add key="cpp-cache" value="%s" />\n  </packageSources>\n  <packageSourceCredentials>\n    <cpp-cache>\n      <add key="Username" value="az" />\n      <add key="ClearTextPassword" value="%s" />\n    </cpp-cache>\n  </packageSourceCredentials>\n  <apikeys>\n    <add key="cpp-cache" value="AzureDevOps" />\n  </apikeys>\n</configuration>\n' "$(NUGET_FEED)" "$$API_KEY" > $(VCPKG_ROOT)/nuget.config; \
-		export VCPKG_BINARY_SOURCES="clear;nugetconfig,$(VCPKG_ROOT)/nuget.config,readwrite"; \
-	elif [ ! -z "$(VCPKG_BINARY_SOURCES)" ]; then \
-		echo "Using existing VCPKG_BINARY_SOURCES: $(VCPKG_BINARY_SOURCES)"; \
-		export VCPKG_BINARY_SOURCES="$(VCPKG_BINARY_SOURCES)"; \
-	fi && \
-	CC=clang CXX=clang++ VCPKG_FEATURE_FLAGS=binarycaching \
+	VCPKG_FEATURE_FLAGS=binarycaching MAKELEVEL=0 \
 		$(VCPKG_ROOT)/vcpkg install \
-		--triplet="$(VCPKG_TRIPLET)" \
-		--overlay-ports=./ports \
-		--debug
+		--overlay-ports=ports \
+		--binarysource=$(VCPKG_BINARY_SOURCES) \
+		--triplet="$(VCPKG_TRIPLET)"
 
 check-vcpkg: vcpkg-bootstrap  vcpkg-install-deps
 	@echo "Checking vcpkg configuration..."
@@ -118,14 +143,13 @@ configure-debug: check-vcpkg
 		-DCMAKE_TOOLCHAIN_FILE=$(VCPKG_TOOLCHAIN) \
 		-DVCPKG_INSTALLED_DIR=$(VCPKG_INSTALLED_DIR) \
 		-DVCPKG_TARGET_TRIPLET=$(VCPKG_TRIPLET) \
-		-Dlsp_DIR=/opt/falcon/lib/cmake/lsp \
 		-DBUILD_TESTS=ON \
-		-DBUILD_TOOLS=ON \
 		-DUSE_CCACHE=ON \
 		-DENABLE_PCH=ON \
 		-DCMAKE_C_COMPILER=clang \
 		-DCMAKE_CXX_COMPILER=clang++ \
-		-DVCPKG_BINARY_SOURCES="$(VCPKG_BINARY_SOURCES)" \
+		$(CMAKE_VCPKG_BINARY_SOURCES) \
+		$(LINKER_FLAGS) \
 		-DVCPKG_OVERLAY_PORTS=../../ports \
 		-G $(CMAKE_GENERATOR)
 	@echo "✓ Debug build configured"
@@ -138,14 +162,13 @@ configure-release: check-vcpkg
 		-DCMAKE_TOOLCHAIN_FILE=$(VCPKG_TOOLCHAIN) \
 		-DVCPKG_INSTALLED_DIR=$(VCPKG_INSTALLED_DIR) \
 		-DVCPKG_TARGET_TRIPLET=$(VCPKG_TRIPLET) \
-		-Dlsp_DIR=/opt/falcon/lib/cmake/lsp \
 		-DBUILD_TESTS=ON \
-		-DBUILD_TOOLS=ON \
 		-DUSE_CCACHE=ON \
 		-DENABLE_PCH=ON \
 		-DCMAKE_C_COMPILER=clang \
 		-DCMAKE_CXX_COMPILER=clang++ \
-		-DVCPKG_BINARY_SOURCES="$(VCPKG_BINARY_SOURCES)" \
+		$(CMAKE_VCPKG_BINARY_SOURCES) \
+		$(LINKER_FLAGS) \
 		-DVCPKG_OVERLAY_PORTS=../../ports \
 		-G $(CMAKE_GENERATOR)
 	@echo "✓ Release build configured"
@@ -220,15 +243,6 @@ test: build-release
 	@echo "✓ All tests passed"
 
 test-debug: build-debug
-	@cd $(BUILD_DIR_DEBUG)/package-manager && \
-		./falcon-pm-tests $(if $(GTEST_FILTER),--gtest_filter="$(GTEST_FILTER)",)
-	@echo "Running dsl tests..."
-	@cd $(BUILD_DIR_DEBUG)/tests && \
-		LD_LIBRARY_PATH=$(CURDIR)/$(BUILD_DIR_DEBUG):$(VCPKG_INSTALLED_DIR)/$(VCPKG_TRIPLET)/lib:$(INSTALL_PREFIX)/lib:$$LD_LIBRARY_PATH \
-		./falcon_dsl_integration_tests $(if $(GTEST_FILTER),--gtest_filter="$(GTEST_FILTER)",)
-	@echo "Running lsp tests..."
-	@cd $(BUILD_DIR_DEBUG)/lsp/tests && \
-		./falcon_lsp_unit_tests $(if $(GTEST_FILTER),--gtest_filter="$(GTEST_FILTER)",) && \
-		./falcon_lsp_integration_tests $(if $(GTEST_FILTER),--gtest_filter="$(GTEST_FILTER)",)
+	@cd $(BUILD_DIR_DEBUG) && \
+		ctest --verbose -C Debug
 	@echo "✓ All tests passed"
-

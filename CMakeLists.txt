@@ -9,10 +9,6 @@ option(BUILD_TESTS  "Build tests"                         ON)
 option(USE_CCACHE   "Enable ccache or sccache if available" ON)
 option(ENABLE_PCH   "Enable target_precompile_headers"    ON)
 
-if(WIN32)
-  add_compile_definitions(NOMINMAX _CRT_SECURE_NO_WARNINGS)
-endif()
-
 if(USE_CCACHE)
   find_program(SCCACHE_PROGRAM sccache)
   if(SCCACHE_PROGRAM)
@@ -29,27 +25,13 @@ endif()
 
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(spdlog        CONFIG REQUIRED)
-find_package(yaml-cpp      CONFIG REQUIRED)
 find_package(falcon-typing CONFIG REQUIRED)
+find_package(falcon-package-manager CONFIG REQUIRED)
 find_package(fmt           CONFIG REQUIRED)
+find_package(OpenSSL       CONFIG REQUIRED)
 
 # 1. Compiler sub-project
 add_subdirectory(compiler)
-
-include_directories(/opt/falcon/include)
-
-# falcon-typing: provides PrimitiveTypes (RuntimeValue/ParameterMap) and FFI ABI.
-# First try in-tree (when building from the falcon-lib root), then installed.
-# if(NOT TARGET falcon::falcon-typing)
-#   find_package(falcon-typing CONFIG REQUIRED
-#     PATHS
-#       "${CMAKE_CURRENT_SOURCE_DIR}/../typing/build/release"
-#       /opt/falcon/lib/cmake/falcon-typing
-#   )
-# endif()
-
-# 2. Package manager sub-project (falcon-pm)
-add_subdirectory(package-manager)
 
 # 3. DSL Runtime Library (falcon-dsl)
 add_library(falcon-dsl SHARED
@@ -73,46 +55,33 @@ target_link_libraries(falcon-dsl
   PUBLIC
     nlohmann_json::nlohmann_json
     falcon-atc-core
-    yaml-cpp::yaml-cpp
     falcon::falcon-typing
   PRIVATE
-    falcon-pm
+    falcon::falcon-package-manager
     fmt::fmt
+    OpenSSL::SSL
 )
 
-# Pass the in-tree include directories so process_ff_import can compile wrappers
-# even when falcon-dsl/ falcon-typing are not yet installed to /opt/falcon.
-target_compile_definitions(falcon-dsl PRIVATE
-    FALCON_AUTOTUNER_INCLUDE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/include"
-    FALCON_TYPING_INCLUDE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../typing/include"
-)
 # ── 4. CLI tool (falcon-run) ─────────────────────────────────────────────────
-option(BUILD_TOOLS "Build CLI tools" ON)
-if(BUILD_TOOLS)
-  add_executable(falcon-run src/cli/main.cpp)
-  target_link_libraries(falcon-run PRIVATE falcon-dsl)
-  target_include_directories(falcon-run
+add_executable(falcon-run src/cli/main.cpp)
+target_link_libraries(falcon-run PRIVATE falcon-dsl)
+target_include_directories(falcon-run
     PRIVATE
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   )
-  install(TARGETS falcon-run RUNTIME DESTINATION bin)
-  # falcon-test: fixture-aware test runner
-  # Reads user .fal test files, injects harness states, and executes all
-  # discovered test suite autotuners.
-  add_executable(falcon-test src/cli/test_main.cpp)
-  target_link_libraries(falcon-test PRIVATE falcon-dsl)
-  target_include_directories(falcon-test
+install(TARGETS falcon-run RUNTIME DESTINATION bin)
+# falcon-test: fixture-aware test runner
+# Reads user .fal test files, injects harness states, and executes all
+# discovered test suite autotuners.
+add_executable(falcon-test src/cli/test_main.cpp)
+target_link_libraries(falcon-test PRIVATE falcon-dsl)
+target_include_directories(falcon-test
     PRIVATE
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   )
-  install(TARGETS falcon-test RUNTIME DESTINATION bin)
-endif()
+install(TARGETS falcon-test RUNTIME DESTINATION bin)
 
-if(MSVC)
-  target_compile_options(falcon-dsl PRIVATE /W4)
-else()
-  target_compile_options(falcon-dsl PRIVATE -Wall -Wextra -Wpedantic)
-endif()
+target_compile_options(falcon-dsl PRIVATE -Wall -Wextra -Wpedantic)
 
 if(ENABLE_PCH)
   target_precompile_headers(falcon-dsl
@@ -121,38 +90,53 @@ if(ENABLE_PCH)
       <nlohmann/json.hpp>
   )
 endif()
-# ── 5. LSP ─────────────────────────────────────────────────
-add_subdirectory(lsp)
 
 if(BUILD_TESTS)
   enable_testing()
   add_subdirectory(tests)
 endif()
 
+# ── Install ───────────────────────────────────────────────────────────────────
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
 install(TARGETS falcon-dsl
   EXPORT falcon-dsl-targets
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
-  RUNTIME DESTINATION bin
   INCLUDES DESTINATION include
 )
 
-include(CMakePackageConfigHelpers)
+# Install CLI separately WITHOUT exporting it
+install(TARGETS falcon-run falcon-test
+  RUNTIME DESTINATION bin
+)
+
+install(DIRECTORY include/falcon-dsl
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILES_MATCHING
+    PATTERN "*.hpp"
+    PATTERN "*.h"
+)
+
 write_basic_package_version_file(
   "${CMAKE_CURRENT_BINARY_DIR}/falcon-dsl-config-version.cmake"
   VERSION ${PROJECT_VERSION}
   COMPATIBILITY AnyNewerVersion
 )
+
 install(EXPORT falcon-dsl-targets
-  FILE falcon-dsl-targets.cmake
+  FILE      falcon-dsl-targets.cmake
   NAMESPACE falcon::
-  DESTINATION lib/cmake/falcon-dsl
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/falcon-dsl
 )
-configure_file(cmake/falcon-dsl-config.cmake.in
-  "${CMAKE_CURRENT_BINARY_DIR}/falcon-dsl-config.cmake" @ONLY
+configure_package_config_file(
+  cmake/falcon-dsl-config.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/falcon-dsl-config.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_DATADIR}/falcon-dsl
 )
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/falcon-dsl-config.cmake"
   "${CMAKE_CURRENT_BINARY_DIR}/falcon-dsl-config-version.cmake"
-  DESTINATION lib/cmake/falcon-dsl
+  DESTINATION ${CMAKE_INSTALL_DATADIR}/falcon-dsl
 )

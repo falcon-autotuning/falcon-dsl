@@ -4,9 +4,6 @@
 #include "falcon-dsl/log.hpp"
 #include <atomic>
 #include <falcon-typing/PrimitiveTypes.hpp>
-#include <falcon_core/communications/Time.hpp>
-#include <falcon_core/physics/config/Loader.hpp>
-#include <falcon_core/physics/config/core/Config.hpp>
 #include <filesystem>
 #include <fstream>
 #include <gtest/gtest.h>
@@ -50,26 +47,8 @@ struct SingleCompileEnvironment : public CompileEnvironment {
 
 class RoutineTestFixture : public ::testing::Test {
 protected:
-  void SetUp() override {
-    setupEnvironment();
-    log::debug("environment variables set");
-  }
+  void SetUp() override {}
   void TearDown() override { unsetenv("NATS_URL"); }
-
-  void setupEnvironment() {
-    const char *test_nats_url = std::getenv("TEST_NATS_URL");
-    if (test_nats_url == nullptr) {
-      nats_url_ = "nats://localhost:4222";
-    } else {
-      nats_url_ = test_nats_url;
-    }
-    setenv("NATS_URL", nats_url_.c_str(), 1);
-    setenv("LOG_LEVEL", "debug", 1);
-  }
-  [[nodiscard]] std::string getDatabaseUrl() const { return db_url_; }
-  [[nodiscard]] std::string getNatsUrl() const { return nats_url_; }
-  std::string db_url_;
-  std::string nats_url_;
 };
 
 class DSLTestBase : public RoutineTestFixture {

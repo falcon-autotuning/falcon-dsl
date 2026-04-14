@@ -8,7 +8,6 @@ add_executable(falcon_dsl_integration_tests
   integration/test_expressions.cpp
   integration/test_control_flow.cpp
   integration/dsl_test_base.cpp
-  integration/test_config.cpp
   integration/test_nest.cpp
   integration/test_error_handling.cpp
   integration/test_routines.cpp

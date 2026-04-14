@@ -1,18 +1,14 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.json.schema.json",
-  "name": "falcon-lib",
+  "name": "falcon-dsl",
   "version": "1.0.0",
-  "description": "Falcon lib implementation",
-  "homepage": "https://github.com/falcon-autotuning/falcon-lib",
+  "description": "The Domain-Specific Language (DSL) library for the Falcon autotuning framework, providing core components and utilities for defining and working with DSLs in the Falcon ecosystem.",
+  "homepage": "https://github.com/falcon-autotuning/falcon-dsl",
   "license": "MPL-2.0",
   "dependencies": [
     {
       "name": "nlohmann-json",
       "version>=": "3.11.2"
-    },
-    {
-      "name": "boost-dll",
-      "version>=": "1.83.0"
     },
     {
       "name": "fmt"
@@ -21,26 +17,19 @@
       "name": "spdlog"
     },
     {
-      "name": "boost-filesystem",
-      "version>=": "1.88.0#0"
-    },
-    {
       "name": "gtest",
       "version>=": "1.16.0"
-    },
-    {
-      "name": "yaml-cpp",
-      "version>=": "0.8.0#3"
     },
     {
       "name": "falcon-typing",
       "version>=": "1.0.0"
     },
     {
-      "name": "openssl"
+      "name": "falcon-package-manager",
+      "version>=": "1.0.2"
     },
     {
-      "name": "curl"
+      "name": "openssl"
     }
   ],
   "builtin-baseline": "e5a1490e1409d175932ef6014519e9ae149ddb7c"

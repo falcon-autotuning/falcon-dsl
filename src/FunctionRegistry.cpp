@@ -1,7 +1,5 @@
 #include "falcon-dsl/FunctionRegistry.hpp"
 #include <falcon-typing/PrimitiveTypes.hpp>
-#include <falcon_core/physics/device_structures/Connection.hpp>
-#include <stdexcept>
 namespace falcon::dsl {
 
 FunctionRegistry::FunctionRegistry()

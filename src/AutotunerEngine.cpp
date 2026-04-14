@@ -2,17 +2,14 @@
 #include "falcon-atc/Compiler.hpp"
 #include "falcon-dsl/StmtExecutor.hpp"
 #include "falcon-dsl/log.hpp"
-#include "falcon-pm/PackageManager.hpp"
-#include "falcon-pm/PackageManifest.hpp"
 #include <dlfcn.h>
+#include <falcon-package-manager/PackageManager.hpp>
+#include <falcon-package-manager/PackageManifest.hpp>
 #include <falcon-typing/FFIHelpers.hpp>
 #include <falcon-typing/falcon_ffi.h>
-#include <filesystem>
 #include <fmt/format.h>
 #include <fstream>
-#include <iostream>
 #include <openssl/sha.h>
-#include <sstream>
 
 namespace falcon::dsl {
 std::string
