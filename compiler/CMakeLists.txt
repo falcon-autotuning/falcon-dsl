@@ -49,6 +49,8 @@ set_source_files_properties(
   ${FLEX_AutotunerLexer_OUTPUTS}
   PROPERTIES GENERATED TRUE
 )
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
 
 install(TARGETS falcon-atc
   EXPORT falcon-dsl-targets

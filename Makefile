@@ -246,3 +246,9 @@ test-debug: build-debug
 	@cd $(BUILD_DIR_DEBUG) && \
 		ctest --verbose -C Debug
 	@echo "✓ All tests passed"
+
+.PHONY: local-install
+local-install: build-release
+	@echo "Installing falcon-dsl to ./local-install ..."
+	cmake --install $(BUILD_DIR_RELEASE) --prefix $(CURDIR)/local-install
+	@echo "✓ Local install complete. Files are in ./local-install"
