@@ -54,7 +54,7 @@ target_include_directories(falcon-dsl
 target_link_libraries(falcon-dsl
   PUBLIC
     nlohmann_json::nlohmann_json
-    falcon-atc-core
+    falcon-atc
     falcon::falcon-typing
   PRIVATE
     falcon::falcon-package-manager

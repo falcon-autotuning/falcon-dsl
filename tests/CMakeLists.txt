@@ -22,7 +22,7 @@ target_link_libraries(falcon_dsl_integration_tests
   PRIVATE
     falcon-dsl
     fmt::fmt
-    falcon-atc-core
+    falcon-atc
     GTest::gtest
     GTest::gtest_main
 )

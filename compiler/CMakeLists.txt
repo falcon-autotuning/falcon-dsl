@@ -24,7 +24,7 @@ flex_target(AutotunerLexer
 add_flex_bison_dependency(AutotunerLexer AutotunerParser)
 
 # Compiler Core Library
-add_library(falcon-atc-core
+add_library(falcon-atc
   ${BISON_AutotunerParser_OUTPUTS}
   ${FLEX_AutotunerLexer_OUTPUTS}
   src/Compiler.cpp
@@ -32,16 +32,16 @@ add_library(falcon-atc-core
   src/BuiltinRegistry.cpp
 )
 
-set_target_properties(falcon-atc-core PROPERTIES POSITION_INDEPENDENT_CODE ON)
+set_target_properties(falcon-atc PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-target_include_directories(falcon-atc-core
+target_include_directories(falcon-atc
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}>  # For generated headers
     $<INSTALL_INTERFACE:include>
 )
-target_link_libraries(falcon-atc-core PUBLIC nlohmann_json::nlohmann_json)
-target_compile_options(falcon-atc-core PRIVATE -w)
+target_link_libraries(falcon-atc PUBLIC nlohmann_json::nlohmann_json)
+target_compile_options(falcon-atc PRIVATE -w)
 
 # Make sure generated files are built first
 set_source_files_properties(
@@ -50,10 +50,15 @@ set_source_files_properties(
   PROPERTIES GENERATED TRUE
 )
 
-install(TARGETS falcon-atc-core
+install(TARGETS falcon-atc
   EXPORT falcon-dsl-targets
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin
   INCLUDES DESTINATION include
+)
+
+install(DIRECTORY include/falcon-atc
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
 )
