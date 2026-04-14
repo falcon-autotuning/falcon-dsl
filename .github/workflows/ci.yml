@@ -18,7 +18,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build cmake build-essential mono-complete
+          sudo apt-get install -y ninja-build cmake build-essential mono-complete bison flex
 
       - name: Run tests
         env:
