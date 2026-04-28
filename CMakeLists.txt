@@ -69,7 +69,6 @@ target_include_directories(falcon-run
     PRIVATE
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   )
-install(TARGETS falcon-run RUNTIME DESTINATION bin)
 # falcon-test: fixture-aware test runner
 # Reads user .fal test files, injects harness states, and executes all
 # discovered test suite autotuners.
@@ -79,7 +78,6 @@ target_include_directories(falcon-test
     PRIVATE
       $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   )
-install(TARGETS falcon-test RUNTIME DESTINATION bin)
 
 target_compile_options(falcon-dsl PRIVATE -Wall -Wextra -Wpedantic)
 
