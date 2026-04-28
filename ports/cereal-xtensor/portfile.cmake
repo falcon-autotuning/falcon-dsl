@@ -1,12 +1,14 @@
+
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
-    REPO falcon-autotuning/falcon-package-manager
+    REPO falcon-autotuning/cereal-xtensor
     REF v${VERSION}
-    SHA512 3af39ef24db52bf9defa120faa1214d539b679babc3eeaf34d026ce3ffe20c568656c78b3ef2c8d89b43ea9b01630debe1066b744f1421f865988aab51b013b5
-)
+    SHA512 28856ce19074b9dd5156c51bd34d56574997f6b780fd64aa7a53b073bdb90b4077d571bc8c8436d13f77af4898d249a8c735cbad31080aca35a18b6da2ef888a)
+
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
 )
+
 vcpkg_cmake_install()
 vcpkg_cmake_config_fixup()
 file(INSTALL "${SOURCE_PATH}/LICENSE"

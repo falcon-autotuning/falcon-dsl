@@ -14,3 +14,5 @@ include("${CMAKE_CURRENT_LIST_DIR}/falcon-dsl-targets.cmake")
 
 check_required_components(falcon-dsl)
 check_required_components(falcon-atc)
+check_required_components(falcon-run)
+check_required_components(falcon-test)

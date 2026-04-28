@@ -1,4 +1,4 @@
-ffimport "ConnectionW.cpp" ("-I/opt/falcon/include/") ("-L/opt/falcon/lib" "-lfalcon_core_cpp")
+ffimport "ConnectionW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib" "-lfalcon-core")
 struct Connection {
     routine NewPlungerGate (string name) -> (Connection c)
     routine NewBarrierGate (string name) -> (Connection c)

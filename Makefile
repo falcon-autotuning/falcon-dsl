@@ -42,7 +42,7 @@ VCPKG_BINARY_SOURCES ?= ""
 ifeq ($(strip $(FEED_URL)),)
   CMAKE_VCPKG_BINARY_SOURCES :=
 else
-	VCPKG_BINARY_SOURCES := "clear;nuget,$(FEED_URL),readwrite"
+	VCPKG_BINARY_SOURCES := "nuget,$(FEED_URL),readwrite"
   CMAKE_VCPKG_BINARY_SOURCES := -DVCPKG_BINARY_SOURCES=$(VCPKG_BINARY_SOURCES)
 endif
 LINKER_FLAGS ?=
@@ -119,7 +119,7 @@ vcpkg-install-deps: setup-nuget-auth
 	VCPKG_FEATURE_FLAGS=binarycaching MAKELEVEL=0 \
 		$(VCPKG_ROOT)/vcpkg install \
 		--overlay-ports=ports \
-		--binarysource=$(VCPKG_BINARY_SOURCES) \
+		--binarysource="$(VCPKG_BINARY_SOURCES)" \
 		--triplet="$(VCPKG_TRIPLET)"
 
 check-vcpkg: vcpkg-bootstrap  vcpkg-install-deps
@@ -239,11 +239,13 @@ clangd-helpers:
 
 test: build-release
 	@cd $(BUILD_DIR_RELEASE) && \
+		LD_LIBRARY_PATH="$(CURDIR)/vcpkg_installed/x64-linux-dynamic/lib:$(LD_LIBRARY_PATH)" \
 		ctest --verbose -C Release
 	@echo "✓ All tests passed"
 
 test-debug: build-debug
 	@cd $(BUILD_DIR_DEBUG) && \
+		LD_LIBRARY_PATH="$(CURDIR)/vcpkg_installed/x64-linux-dynamic/lib:$(LD_LIBRARY_PATH)" \
 		ctest --verbose -C Debug
 	@echo "✓ All tests passed"
 

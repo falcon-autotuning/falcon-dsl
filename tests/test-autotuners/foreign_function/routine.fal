@@ -1,4 +1,4 @@
-ffimport "MathW.cpp" ("-I/opt/falcon/include/") ("-L/opt/falcon_lib")
+ffimport "MathW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
 routine Adder (int a, int b) -> (int add)
 routine Multiplier (int a, int b) -> (int mult)
 

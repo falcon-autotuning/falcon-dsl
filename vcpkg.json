@@ -1,7 +1,7 @@
 {
   "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.json.schema.json",
   "name": "falcon-dsl",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "The Domain-Specific Language (DSL) library for the Falcon autotuning framework, providing core components and utilities for defining and working with DSLs in the Falcon ecosystem.",
   "homepage": "https://github.com/falcon-autotuning/falcon-dsl",
   "license": "MPL-2.0",
@@ -30,7 +30,24 @@
     },
     {
       "name": "openssl"
+    },
+    {
+      "name": "cereal-xtensor"
+    },
+    {
+      "name": "falcon-core",
+      "version>=": "1.2.11"
     }
   ],
-  "builtin-baseline": "e5a1490e1409d175932ef6014519e9ae149ddb7c"
+  "builtin-baseline": "e5a1490e1409d175932ef6014519e9ae149ddb7c",
+  "overrides": [
+    {
+      "name": "xtensor",
+      "version": "0.25.0"
+    },
+    {
+      "name": "xtl",
+      "version": "0.7.5"
+    }
+  ]
 }

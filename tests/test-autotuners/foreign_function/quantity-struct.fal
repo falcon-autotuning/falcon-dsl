@@ -1,4 +1,4 @@
-ffimport "QuantityW.cpp" ("-I/opt/falcon/include/") ("-L/opt/falcon_lib")
+ffimport "QuantityW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
 struct Quantity {
     routine New (int a, int b) -> (Quantity q)
     routine Value  -> (int value)
