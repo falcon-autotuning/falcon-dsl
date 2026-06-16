@@ -90,3 +90,14 @@ TEST_F(BasicFeaturesTest, TerminalState) {
   ASSERT_FALSE(outputs.empty());
   EXPECT_EQ(std::get<int64_t>(outputs[0]), 2);
 }
+
+TEST_F(BasicFeaturesTest, MockAutotuner) {
+  ParameterMap params;
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/mocking/test_mock.fal"),
+      "TestRunner", params, true};
+  auto [success, outputs] = compile_and_run(cenv);
+  ASSERT_TRUE(success);
+  ASSERT_FALSE(outputs.empty());
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 99);
+}

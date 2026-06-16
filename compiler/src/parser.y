@@ -138,7 +138,7 @@
 // TOKEN DECLARATIONS
 // ============================================================================
 
-%token AUTOTUNER ROUTINE STATE IMPORT FFIMPORT START TERMINAL
+%token AUTOTUNER ROUTINE STATE IMPORT FFIMPORT START TERMINAL MOCK
 %token IF ELIF ELSE STRUCT THIS
 %token <std::string> IDENTIFIER STRING INTEGER DOUBLE
 %token INT_KW FLOAT_KW BOOL_KW STRING_KW ERROR_KW ARRAY_KW
@@ -547,7 +547,32 @@ autotuner_decl[result]
           std::move($vars),
           std::move($entry),
           std::move($params),
-          std::move($states)
+          std::move($states),
+          false
+        );
+      }
+    | MOCK AUTOTUNER IDENTIFIER[name]
+      {
+        clear_autotuner_scope();
+      }
+      input_params[inputs]
+      ARROW
+      output_params[outputs]
+      LBRACE
+        autotuner_var_decls[vars]
+        entry_state[entry] entry_params[params] SEMICOLON
+        state_list[states]
+      RBRACE
+      {
+        $result = std::make_unique<AutotunerDecl>(
+          std::move($name),
+          std::move($inputs),
+          std::move($outputs),
+          std::move($vars),
+          std::move($entry),
+          std::move($params),
+          std::move($states),
+          true
         );
       }
     ;

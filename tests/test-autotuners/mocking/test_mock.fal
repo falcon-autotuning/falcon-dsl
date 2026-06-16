@@ -1,0 +1,17 @@
+autotuner RealTuner() -> (int value) {
+    value = 10;
+    start -> end;
+    state end { terminal; }
+}
+
+mock autotuner RealTuner() -> (int value) {
+    value = 99;
+    start -> end;
+    state end { terminal; }
+}
+
+autotuner TestRunner() -> (int res) {
+    res = RealTuner();
+    start -> end;
+    state end { terminal; }
+}

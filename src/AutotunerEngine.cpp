@@ -149,9 +149,10 @@ bool AutotunerEngine::load_fal_file(const std::string &fal_file_path) {
     for (auto &autotuner : program->autotuners) {
       autotuner.module_name = program->module_name;
       log::info("  - Autotuner: " + autotuner.name);
+      std::string name_key = autotuner.is_mock ? "mock::" + autotuner.name : autotuner.name;
       std::string qname = autotuner.module_name.empty()
-                              ? autotuner.name
-                              : autotuner.module_name + "::" + autotuner.name;
+                              ? name_key
+                              : autotuner.module_name + "::" + name_key;
       loaded_autotuners_.erase(qname);
       loaded_autotuners_.insert({qname, std::move(autotuner)});
       auto it = loaded_autotuners_.find(qname);
@@ -441,9 +442,10 @@ AutotunerEngine::get_autotuner(const std::string &name) const {
 
 void AutotunerEngine::register_autotuner_as_function(
     const atc::AutotunerDecl &autotuner) {
+  std::string name_to_register = autotuner.is_mock ? "mock::" + autotuner.name : autotuner.name;
   std::string qname = autotuner.module_name.empty()
-                          ? autotuner.name
-                          : autotuner.module_name + "::" + autotuner.name;
+                          ? name_to_register
+                          : autotuner.module_name + "::" + name_to_register;
 
   auto func = [this,
                qname](typing::ParameterMap &inputs) -> typing::FunctionResult {
@@ -466,17 +468,22 @@ void AutotunerEngine::register_autotuner_as_function(
   }
 
   // Register bare name
-  atc::BuiltinSignature bare_sig(autotuner.name, params, returns);
+  atc::BuiltinSignature bare_sig(name_to_register, params, returns);
   function_registry_->register_autotuner(bare_sig, func);
 
   // Register qualified name if module is known
   if (!autotuner.module_name.empty()) {
-    std::string qname = autotuner.module_name + "::" + autotuner.name;
-    atc::BuiltinSignature q_sig(qname, std::move(params), std::move(returns));
+    std::string qname_registered = autotuner.module_name + "::" + name_to_register;
+    atc::BuiltinSignature q_sig(qname_registered, std::move(params), std::move(returns));
     function_registry_->register_autotuner(q_sig, func);
-    log::debug(fmt::format("Loaded autotuner: {}", qname));
+    log::debug(fmt::format("Loaded autotuner: {}", qname_registered));
   } else {
-    log::debug(fmt::format("Loaded autotuner: {}", autotuner.name));
+    log::debug(fmt::format("Loaded autotuner: {}", name_to_register));
+  }
+
+  // If it's a mock, register a redirection mapping from the original name
+  if (autotuner.is_mock) {
+    function_registry_->register_mock(autotuner.name, qname);
   }
 }
 

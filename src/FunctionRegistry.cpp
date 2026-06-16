@@ -28,6 +28,20 @@ void FunctionRegistry::register_autotuner(const atc::BuiltinSignature &sig,
   signatures_.emplace(sig.qualified_name, sig);
 }
 
+static std::string strip_module(const std::string &name) {
+  size_t pos = name.rfind("::");
+  if (pos != std::string::npos) {
+    return name.substr(pos + 2);
+  }
+  return name;
+}
+
+void FunctionRegistry::register_mock(const std::string &original_name,
+                                      const std::string &mock_name) {
+  std::string bare = strip_module(original_name);
+  mocks_[bare] = mock_name;
+}
+
 void FunctionRegistry::register_routine(const RoutineInfo &routine) {
   functions_[routine.name] = routine.function;
   signatures_.emplace(routine.name, routine.signature);
@@ -35,6 +49,14 @@ void FunctionRegistry::register_routine(const RoutineInfo &routine) {
 }
 
 ExternalFunction *FunctionRegistry::lookup(const std::string &name) {
+  std::string bare = strip_module(name);
+  auto mock_it = mocks_.find(bare);
+  if (mock_it != mocks_.end() && name != mock_it->second) {
+    auto it = functions_.find(mock_it->second);
+    if (it != functions_.end()) {
+      return &it->second;
+    }
+  }
   auto it = functions_.find(name);
   if (it != functions_.end()) {
     return &it->second;
@@ -44,6 +66,14 @@ ExternalFunction *FunctionRegistry::lookup(const std::string &name) {
 
 const atc::BuiltinSignature *
 FunctionRegistry::get_signature(const std::string &name) const {
+  std::string bare = strip_module(name);
+  auto mock_it = mocks_.find(bare);
+  if (mock_it != mocks_.end() && name != mock_it->second) {
+    auto it = signatures_.find(mock_it->second);
+    if (it != signatures_.end()) {
+      return &it->second;
+    }
+  }
   auto it = signatures_.find(name);
   if (it != signatures_.end()) {
     return &it->second;
@@ -53,6 +83,14 @@ FunctionRegistry::get_signature(const std::string &name) const {
 
 const RoutineInfo *
 FunctionRegistry::get_routine_info(const std::string &name) const {
+  std::string bare = strip_module(name);
+  auto mock_it = mocks_.find(bare);
+  if (mock_it != mocks_.end() && name != mock_it->second) {
+    auto it = routines_.find(mock_it->second);
+    if (it != routines_.end()) {
+      return &it->second;
+    }
+  }
   auto it = routines_.find(name);
   if (it != routines_.end()) {
     return &it->second;
@@ -61,6 +99,11 @@ FunctionRegistry::get_routine_info(const std::string &name) const {
 }
 
 bool FunctionRegistry::has_function(const std::string &name) const {
+  std::string bare = strip_module(name);
+  auto mock_it = mocks_.find(bare);
+  if (mock_it != mocks_.end() && name != mock_it->second) {
+    return functions_.find(mock_it->second) != functions_.end();
+  }
   return functions_.find(name) != functions_.end();
 }
 

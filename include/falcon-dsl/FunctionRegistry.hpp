@@ -85,6 +85,11 @@ public:
   [[nodiscard]] bool has_function(const std::string &name) const;
 
   /**
+   * @brief Register a mock override mapping original_name to mock_name.
+   */
+  void register_mock(const std::string &original_name, const std::string &mock_name);
+
+  /**
    * @brief Create default registry with all builtins.
    */
   static std::shared_ptr<FunctionRegistry> create_default();
@@ -94,6 +99,7 @@ private:
   std::map<std::string, atc::BuiltinSignature>
       signatures_; // References to unified registry
   std::map<std::string, RoutineInfo> routines_;
+  std::map<std::string, std::string> mocks_; // maps original bare name -> qualified mock name
 
   // Keep a reference to the builtin registry so signatures remain valid
   atc::BuiltinFunctionRegistry builtin_registry_;

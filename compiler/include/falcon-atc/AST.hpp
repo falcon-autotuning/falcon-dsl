@@ -1203,15 +1203,17 @@ struct AutotunerDecl {
   // State machine
   std::vector<StateDecl> states;
 
+  bool is_mock = false;
+
   AutotunerDecl(std::string n, std::vector<std::unique_ptr<ParamDecl>> inputs,
                 std::vector<std::unique_ptr<ParamDecl>> outputs,
                 std::vector<std::unique_ptr<Stmt>> vars, std::string entry,
                 std::vector<std::unique_ptr<Expr>> entry_params,
-                std::vector<StateDecl> sts)
+                std::vector<StateDecl> sts, bool mock = false)
       : name(std::move(n)), input_params(std::move(inputs)),
         output_params(std::move(outputs)), autotuner_variables(std::move(vars)),
         entry_state(std::move(entry)),
-        entry_parameters(std::move(entry_params)), states(std::move(sts)) {}
+        entry_parameters(std::move(entry_params)), states(std::move(sts)), is_mock(mock) {}
 
   AutotunerDecl(AutotunerDecl &&) noexcept = default;
   AutotunerDecl &operator=(AutotunerDecl &&) noexcept = default;

@@ -23,6 +23,7 @@ using namespace falcon::atc;
 
 %%
 
+"mock"          { return Parser::make_MOCK(*loc); }
 "autotuner"     { return Parser::make_AUTOTUNER(*loc); }
 "routine"       { return Parser::make_ROUTINE(*loc); }
 "state"         { return Parser::make_STATE(*loc); }
