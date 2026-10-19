@@ -761,11 +761,18 @@ bool AutotunerEngine::process_ff_import(
     for (const auto &p : routine.output_params)
       returns.emplace_back(p->name, p->type, false);
 
-    atc::BuiltinSignature sig(routine.name, std::move(params),
-                              std::move(returns));
+    atc::BuiltinSignature sig(routine.name, params, returns);
     RoutineInfo info{routine.name, so_path.string(), ext_func, sig};
     function_registry_->register_routine(info);
     log::debug("Registered FFI routine: " + routine.name);
+
+    if (!program.module_name.empty()) {
+      std::string qname = program.module_name + "::" + routine.name;
+      atc::BuiltinSignature q_sig(qname, std::move(params), std::move(returns));
+      RoutineInfo q_info{qname, so_path.string(), ext_func, q_sig};
+      function_registry_->register_routine(q_info);
+      log::debug("Registered qualified FFI routine: " + qname);
+    }
   }
 
   return true;
