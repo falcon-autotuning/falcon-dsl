@@ -1,0 +1,13 @@
+routine check() -> (int value) {
+    value = 10;
+}
+
+routine check() -> (int value) {
+    value = 99;
+}
+
+autotuner TestRunner() -> (int res) {
+    res = check();
+    start -> end;
+    state end { terminal; }
+}
