@@ -99,7 +99,7 @@ TEST_F(StructsTest, GenericPairIntString) {
 TEST_F(StructsTest, GenericAccumulatorInt) {
   ParameterMap params;
   params["start_val"] = static_cast<int64_t>(10);
-  params["add_val"]   = static_cast<int64_t>(5);
+  params["add_val"] = static_cast<int64_t>(5);
   SingleCompileEnvironment cenv{
       std::filesystem::path("test-autotuners/structs/generic-math.fal"),
       "GenericMath", params, true};
@@ -114,10 +114,11 @@ TEST_F(StructsTest, GenericAccumulatorInt) {
 TEST_F(StructsTest, GenericWrongArityRejected) {
   // This .fal file contains  Box<int, float> b = Box.New(x);
   // where Box is declared with one type param.  The parser should reject it
-  // at load time with an arity error — no exception, just load_fal_file → false.
+  // at load time with an arity error — no exception, just load_fal_file →
+  // false.
   falcon::dsl::AutotunerEngine engine;
-  bool loaded = engine.load_fal_file(
-      "test-autotuners/structs/generic-wrong-arity.fal");
+  bool loaded =
+      engine.load_fal_file("test-autotuners/structs/generic-wrong-arity.fal");
   EXPECT_FALSE(loaded)
       << "Expected load to fail due to wrong generic arity, but it succeeded";
 }
@@ -125,13 +126,29 @@ TEST_F(StructsTest, GenericWrongArityRejected) {
 TEST_F(StructsTest, AccumulatorInt) {
   ParameterMap params;
   params["start_val"] = static_cast<int64_t>(10);
-  params["add_val"]   = static_cast<int64_t>(5);
+  params["add_val"] = static_cast<int64_t>(5);
   SingleCompileEnvironment cenv{
-      std::filesystem::path("test-autotuners/structs/math.fal"),
-      "Math", params, true};
+      std::filesystem::path("test-autotuners/structs/math.fal"), "Math", params,
+      true};
   auto [success, outputs] = compile_and_run(cenv);
   ASSERT_TRUE(success);
   ASSERT_EQ(outputs.size(), 1u);
   // Accumulator.New(10), then .Add(5) → returns 15
   EXPECT_EQ(std::get<int64_t>(outputs[0]), 15);
+}
+
+TEST_F(StructsTest, ForeignGenericBoxInt) {
+  ParameterMap params;
+  params["x"] = static_cast<int64_t>(42);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/structs/foreign-box-binding.fal"),
+      "ForeignGenericBoxInt", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 42);
 }

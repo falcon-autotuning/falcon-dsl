@@ -338,7 +338,7 @@ typing::FunctionResult ExprEvaluator::exec_struct_routine(
     if (ffi_method != nullptr) {
       typing::ParameterMap ffi_params;
 
-      if (receiver_instance && receiver_instance->is_native()) {
+      if (receiver_instance != nullptr) {
         // Case B: instance method — forward the native handle as "this"
         log::debug("FFI dispatch (instance): " + struct_decl.name + "." +
                    routine.name);

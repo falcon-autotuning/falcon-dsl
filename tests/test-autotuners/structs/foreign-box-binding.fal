@@ -1,0 +1,20 @@
+ffimport "BoxW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
+// Tests a simple single-type-param generic struct.
+// struct Box<T> wraps a single value of any type.
+struct ForeignBox <T> {
+    T value;
+    routine New (T v) -> (ForeignBox<T> b) {
+        b.value = v;
+    }
+    routine Get () -> (T v)
+}
+
+autotuner ForeignGenericBoxInt (int x) -> (int result) {
+    result = 0;
+    start -> run;
+    state run {
+        ForeignBox<int> b = ForeignBox.New(x);
+        result = b.Get();
+        terminal;
+    }
+}
