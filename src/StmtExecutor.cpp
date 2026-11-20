@@ -69,6 +69,10 @@ ControlFlow StmtExecutor::execute(const atc::Stmt &stmt) {
                              [&](const auto &x) { return exec_if(x); })) {
     return *result;
   }
+  if (auto result = try_exec(dynamic_cast<const atc::ForStmt *>(&stmt),
+                             [&](const auto &x) { return exec_for(x); })) {
+    return *result;
+  }
   if (auto result =
           try_exec(dynamic_cast<const atc::TransitionStmt *>(&stmt),
                    [&](const auto &x) { return exec_transition(x); })) {
@@ -131,7 +135,8 @@ ControlFlow StmtExecutor::exec_var_decl(const atc::VarDeclStmt &stmt) {
     case atc::ParamType::Array: {
       // Array<T> is now a StructInstance backed by the array FFI library.
       // Default-initialize to a fresh empty StructInstance; the library's
-      // New() constructor should be used to create a properly initialized array.
+      // New() constructor should be used to create a properly initialized
+      // array.
       std::string struct_name = "Array";
       if (stmt.type.element_type) {
         struct_name += "<" + stmt.type.element_type->to_string() + ">";
@@ -312,6 +317,59 @@ ControlFlow StmtExecutor::exec_if(const atc::IfStmt &stmt) {
   if (stmt.has_else()) {
     // Execute else branch
     return execute_block(stmt.else_body);
+  }
+
+  return ControlFlow::none();
+}
+
+ControlFlow StmtExecutor::exec_for(const atc::ForStmt &stmt) {
+  auto begin_val = evaluator_.evaluate(*stmt.begin);
+  auto end_val = evaluator_.evaluate(*stmt.end);
+
+  if (!std::holds_alternative<int64_t>(begin_val)) {
+    throw EvaluationError("For-loop start expression must evaluate to int");
+  }
+
+  if (!std::holds_alternative<int64_t>(end_val)) {
+    throw EvaluationError("For-loop end expression must evaluate to int");
+  }
+
+  int64_t begin = std::get<int64_t>(begin_val);
+  int64_t end = std::get<int64_t>(end_val);
+
+  // Save outer value if loop variable already exists.
+  // This supports nested loops and shadowing.
+  auto old_it = variables_.find(stmt.variable);
+
+  bool had_old_value = (old_it != variables_.end());
+  typing::RuntimeValue old_value;
+
+  if (had_old_value) {
+    old_value = old_it->second;
+  }
+
+  for (int64_t i = begin; i < end; ++i) {
+    variables_[stmt.variable] = i;
+    auto flow = execute_block(stmt.body);
+
+    // Respect control flow escaping the loop.
+    if (flow.type != ControlFlow::Type::None) {
+
+      if (had_old_value) {
+        variables_[stmt.variable] = old_value;
+      } else {
+        variables_.erase(stmt.variable);
+      }
+
+      return flow;
+    }
+  }
+
+  // Restore previous binding.
+  if (had_old_value) {
+    variables_[stmt.variable] = old_value;
+  } else {
+    variables_.erase(stmt.variable);
   }
 
   return ControlFlow::none();

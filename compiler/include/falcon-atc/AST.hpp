@@ -981,6 +981,33 @@ public:
   }
 };
 
+class ForStmt : public Stmt {
+public:
+  std::string variable;
+  // Optional starting index
+  std::unique_ptr<Expr> begin;
+  // Exclusive upper bound
+  std::unique_ptr<Expr> end;
+  std::vector<std::unique_ptr<Stmt>> body;
+
+  ForStmt(std::string var, std::unique_ptr<Expr> first,
+          std::unique_ptr<Expr> last, std::vector<std::unique_ptr<Stmt>> stmts)
+      : variable(std::move(var)), begin(std::move(first)), end(std::move(last)),
+        body(std::move(stmts)) {}
+
+  std::unique_ptr<Stmt> clone() const override {
+    std::vector<std::unique_ptr<Stmt>> cloned_body;
+    cloned_body.reserve(body.size());
+    for (const auto &stmt : body) {
+      cloned_body.push_back(stmt->clone());
+    }
+
+    return std::make_unique<ForStmt>(variable, begin ? begin->clone() : nullptr,
+                                     end ? end->clone() : nullptr,
+                                     std::move(cloned_body));
+  }
+};
+
 // ============================================================================
 // PARAMETER DECLARATIONS
 // ============================================================================
@@ -1213,7 +1240,8 @@ struct AutotunerDecl {
       : name(std::move(n)), input_params(std::move(inputs)),
         output_params(std::move(outputs)), autotuner_variables(std::move(vars)),
         entry_state(std::move(entry)),
-        entry_parameters(std::move(entry_params)), states(std::move(sts)), is_mock(mock) {}
+        entry_parameters(std::move(entry_params)), states(std::move(sts)),
+        is_mock(mock) {}
 
   AutotunerDecl(AutotunerDecl &&) noexcept = default;
   AutotunerDecl &operator=(AutotunerDecl &&) noexcept = default;

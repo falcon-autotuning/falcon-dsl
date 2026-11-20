@@ -1,0 +1,20 @@
+routine Add(int a, int b) -> (int out) {
+    out = a + b;
+}
+
+routine SumUsingRoutine(int n) -> (int sum) {
+    sum = 0;
+
+    for i in n {
+        sum = Add(sum, i);
+    }
+}
+
+autotuner ForLoopSum(int n) -> (int out) {
+    out = 0;
+    start -> run;
+    state run {
+        out = SumUsingRoutine(n);
+        terminal;
+    }
+}

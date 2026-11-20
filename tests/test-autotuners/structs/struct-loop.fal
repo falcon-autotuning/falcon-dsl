@@ -1,0 +1,30 @@
+struct Accumulator {
+    int total;
+
+    routine New(int begin) -> (Accumulator acc) {
+        acc.total = begin;
+    }
+
+    routine AddMany(int count) -> (int result) {
+
+        for i in count {
+            total = total + i;
+        }
+
+        result = total;
+    }
+}
+
+autotuner StructLoop(int count) -> (int out) {
+    out = 0;
+
+    start -> run;
+
+    state run {
+        Accumulator acc = Accumulator.New(0);
+
+        out = acc.AddMany(count);
+
+        terminal;
+    }
+}

@@ -93,16 +93,47 @@
     state_input_params.clear();
   }
 
+  std::vector<std::set<std::string>> loop_scopes;
+
+  bool is_loop_variable(const std::string& name) {
+      for (auto it = loop_scopes.rbegin();
+          it != loop_scopes.rend();
+          ++it) {
+          if (it->count(name)) {
+              return true;
+          }
+      }
+      return false;
+  }
+
+  void push_loop_scope() {
+      loop_scopes.emplace_back();
+  }
+
+  void pop_loop_scope() {
+      loop_scopes.pop_back();
+  }
+
+  void declare_loop_variable(const std::string& name) {
+      if (!loop_scopes.empty()) {
+          loop_scopes.back().insert(name);
+      }
+  }
+
   bool is_variable_declared(const std::string& name) {
-    if (in_struct_routine && struct_field_scope.count(name) > 0) return true;
-    return autotuner_scope.count(name) > 0 ||
-           autotuner_input_params.count(name) > 0 ||
-           autotuner_output_params.count(name) > 0 ||
-           state_local_scope.count(name) > 0 ||
-           state_input_params.count(name) > 0;
+      if (is_loop_variable(name)) return true;
+
+      if (in_struct_routine && struct_field_scope.count(name) > 0) return true;
+      return autotuner_scope.count(name) > 0 ||
+            autotuner_input_params.count(name) > 0 ||
+            autotuner_output_params.count(name) > 0 ||
+            state_local_scope.count(name) > 0 ||
+            state_input_params.count(name) > 0;
   }
 
   bool is_redeclaration(const std::string& name, bool in_state) {
+    if (is_loop_variable(name))
+      return true;
     if (in_state) {
       return autotuner_scope.count(name) > 0 ||
              autotuner_input_params.count(name) > 0 ||
@@ -132,6 +163,7 @@
       expr->column = loc.begin.column;
     }
   }
+
 }
 
 // ============================================================================
@@ -139,7 +171,7 @@
 // ============================================================================
 
 %token AUTOTUNER ROUTINE STATE IMPORT FFIMPORT START TERMINAL MOCK
-%token IF ELIF ELSE STRUCT THIS
+%token IF ELIF ELSE STRUCT THIS FOR IN COLON
 %token <std::string> IDENTIFIER STRING INTEGER DOUBLE
 %token INT_KW FLOAT_KW BOOL_KW STRING_KW ERROR_KW ARRAY_KW
 %token TRUE FALSE NIL
@@ -163,7 +195,11 @@
 %type <std::vector<StateDecl>> state_list
 %type <std::unique_ptr<StateDecl>> state_decl
 %type <std::vector<std::unique_ptr<Stmt>>> stmt_list elif_chain
-%type <std::unique_ptr<Stmt>> stmt struct_routine_stmt
+%type <std::unique_ptr<Stmt>> stmt struct_routine_stmt for_stmt
+%type <std::string> loop_var
+%type <std::pair<
+    std::unique_ptr<Expr>,
+    std::unique_ptr<Expr>>> for_range
 %type <std::unique_ptr<Expr>> expr primary_expr postfix_expr
 %type <std::vector<std::unique_ptr<Expr>>> expr_list 
 %type <std::vector<CallArg>> call_arg_list 
@@ -389,8 +425,62 @@ routine_body_stmts[result]
       }
     ;
 
+loop_var[result]
+    : FOR IDENTIFIER[var] IN
+      {
+          push_loop_scope();
+          if (is_redeclaration($var, true)) {
+              error(@var,
+                    "Loop variable shadows existing variable: " + $var);
+              YYABORT;
+          }
+          declare_loop_variable($var);
+          $result = std::move($var);
+      }
+    ;
+
+for_range[result]
+    : expr[end]
+      {
+          $result = {
+              std::make_unique<LiteralExpr>(int64_t(0)),
+              std::move($end)
+          };
+      }
+    | expr[start] COLON expr[end]
+      {
+          $result = {
+              std::move($start),
+              std::move($end)
+          };
+      }
+    ;
+
+for_stmt[result]
+    : loop_var[var]
+      for_range[range]
+      LBRACE routine_body_stmts[body] RBRACE
+      {
+          pop_loop_scope();
+
+          auto stmt =
+              std::make_unique<ForStmt>(
+                  std::move($var),
+                  std::move($range.first),
+                  std::move($range.second),
+                  std::move($body));
+
+          set_stmt_location(stmt.get(), @1);
+
+          $result = std::move(stmt);
+      }
+
 struct_routine_stmt[result]
-    : var_decl_stmt[vd]
+    : for_stmt[f]
+          {
+              $result = std::move($f);
+          }
+    | var_decl_stmt[vd]
       {
         $result = std::move($vd);
         set_stmt_location($result.get(), @vd);

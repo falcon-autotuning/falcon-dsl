@@ -152,3 +152,19 @@ TEST_F(StructsTest, ForeignGenericBoxInt) {
 
   EXPECT_EQ(std::get<int64_t>(outputs[0]), 42);
 }
+
+TEST_F(StructsTest, StructRoutineForLoop) {
+  ParameterMap params;
+  params["count"] = static_cast<int64_t>(5);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/structs/struct-loop.fal"),
+      "StructLoop", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(10));
+}

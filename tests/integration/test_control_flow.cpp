@@ -119,3 +119,13 @@ TEST_F(ControlFlowTest, MultiStageWorkflow) {
   EXPECT_TRUE(std::get<bool>(outputs[1]));
   EXPECT_EQ(std::get<std::string>(outputs[0]), "completed");
 }
+
+TEST_F(ControlFlowTest, StateForLoopRejected) {
+  falcon::dsl::AutotunerEngine engine;
+
+  bool loaded = engine.load_fal_file(
+      "test-autotuners/control_flow/bad-state-for-loop.fal");
+
+  EXPECT_FALSE(loaded) << "Expected load to fail because for-loops are "
+                          "not allowed inside autotuner states.";
+}

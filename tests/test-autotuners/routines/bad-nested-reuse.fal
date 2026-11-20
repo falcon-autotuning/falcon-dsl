@@ -1,0 +1,16 @@
+routine NestedReuse(int count) -> (int sum) {
+    for i in count {
+        for i in count {
+            sum = sum + i;
+        }
+    }
+}
+
+autotuner ForLoopSum(int n) -> (int out) {
+    out = 0;
+    start -> run;
+    state run {
+        out = NestedReuse(n);
+        terminal;
+    }
+}

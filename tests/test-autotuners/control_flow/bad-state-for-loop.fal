@@ -1,0 +1,15 @@
+autotuner BadStateLoop -> (int out) {
+
+    out = 0;
+
+    start -> run;
+
+    state run {
+
+        for i in 10 {
+            out = out + 1;
+        }
+
+        terminal;
+    }
+}

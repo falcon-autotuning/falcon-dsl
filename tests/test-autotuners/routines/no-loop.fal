@@ -1,0 +1,16 @@
+routine RangeStart(int n) -> (int sum) {
+    sum = 0;
+
+    for i in 5:5 {
+        sum = 100;
+    }
+}
+
+autotuner ForLoopSum(int n) -> (int out) {
+    out = 0;
+    start -> run;
+    state run {
+        out = RangeStart(n);
+        terminal;
+    }
+}

@@ -1,0 +1,18 @@
+routine NestedLoop(int n) -> (int sum) {
+    sum = 0;
+
+    for i in n {
+        for j in n {
+            sum = sum + 1;
+        }
+    }
+}
+
+autotuner ForLoopSum(int n) -> (int out) {
+    out = 0;
+    start -> run;
+    state run {
+        out = NestedLoop(n);
+        terminal;
+    }
+}

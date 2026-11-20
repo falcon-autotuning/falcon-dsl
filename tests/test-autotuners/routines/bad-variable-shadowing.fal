@@ -1,0 +1,16 @@
+routine BadLoop(int count) -> (int sum) {
+    int i = 0;
+
+    for i in count {
+        sum = sum + i;
+    }
+}
+
+autotuner ForLoopSum(int n) -> (int out) {
+    out = 0;
+    start -> run;
+    state run {
+        out = BadLoop(n);
+        terminal;
+    }
+}

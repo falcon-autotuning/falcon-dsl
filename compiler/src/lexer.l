@@ -34,6 +34,8 @@ using namespace falcon::atc;
 "if"            { return Parser::make_IF(*loc); }
 "elif"          { return Parser::make_ELIF(*loc); }
 "else"          { return Parser::make_ELSE(*loc); }
+"for"           { return Parser::make_FOR(*loc); }
+"in"            { return Parser::make_IN(*loc); }
 "true"          { return Parser::make_TRUE(*loc); }
 "false"         { return Parser::make_FALSE(*loc); }
 "nil"           { return Parser::make_NIL(*loc); }
@@ -57,6 +59,7 @@ using namespace falcon::atc;
 ","             { return Parser::make_COMMA(*loc); }
 ";"             { return Parser::make_SEMICOLON(*loc); }
 "::"            { return Parser::make_COLONCOLON(*loc); }
+":"             { return Parser::make_COLON(*loc); }
 "."             { return Parser::make_DOT(*loc); }
 "+"             { return Parser::make_PLUS(*loc); }
 "-"             { return Parser::make_MINUS(*loc); }

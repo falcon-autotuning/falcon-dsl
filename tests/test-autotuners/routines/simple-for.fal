@@ -1,0 +1,16 @@
+routine SumToN(int n) -> (int sum) {
+    sum = 0;
+
+    for i in n {
+        sum = sum + i;
+    }
+}
+
+autotuner ForLoopSum(int n) -> (int out) {
+    out = 0;
+    start -> run;
+    state run {
+        out = SumToN(n);
+        terminal;
+    }
+}
