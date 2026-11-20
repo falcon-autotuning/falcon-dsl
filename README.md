@@ -53,7 +53,7 @@ autotuner ChargeStability (float gate_voltage, int sweep_steps) -> (bool stable)
 ## Components
 
 | Component | Description |
-|-----------|-------------|
+| ----------- | ------------- |
 | `falcon-dsl` | Core runtime library: interpreter, autotuner engine, type system |
 | `falcon-atc` | Compiler sub-library: lexer, parser, AST (internal) |
 | `falcon-run` | CLI tool: run any autotuner from the command line |
@@ -79,7 +79,7 @@ make install
 This single command calls three sub-targets in order:
 
 | Sub-target | What it installs |
-|------------|-----------------|
+| ------------ | ----------------- |
 | `make install-dsl` | `libfalcon-dsl.so`, headers, CMake config, `falcon-run`, `falcon-test` binaries |
 | `make install-lsp` | `falcon-lsp` language server binary, `libfalcon-lsp.a` |
 | `make install-pm` | `libfalcon-pm.a`, `falcon-pm` binary, headers |
@@ -187,7 +187,7 @@ autotuner MyAutotuner (int iteration, float voltage) -> (float result) {
 ### Language primitives
 
 | Type | Description | Examples |
-|------|-------------|---------|
+| ------ | ------------- | --------- |
 | `int` | 64-bit signed integer | `0`, `-5`, `1000` |
 | `float` | Double-precision float | `0.0`, `-3.14`, `1e-9` |
 | `bool` | Boolean | `true`, `false` |
@@ -243,7 +243,7 @@ state sweep_point (float voltage) {
 ### Transitions
 
 | Syntax | Meaning |
-|--------|---------|
+| -------- | --------- |
 | `-> next_state;` | Unconditional jump |
 | `if (cond) -> s1; else -> s2;` | Conditional branch |
 | `-> next(val);` | Transfer value to state parameter |
@@ -251,17 +251,48 @@ state sweep_point (float voltage) {
 
 ### Routines
 
-Pure `.fal` helper functions (no measurement, no state machine):
+Pure `.fal` helper functions (no measurement or state-machine transitions). Routines may declare local variables, use conditionals, and iterate with `for` loops.
 
 ```fal
-routine clamp (float val, float lo, float hi) -> (float out) {
-    if (val < lo) { out = lo; }
-    elif (val > hi) { out = hi; }
-    else { out = val; }
+routine clamp(float val, float lo, float hi) -> (float out) {
+    if (val < lo) {
+        out = lo;
+    }
+    elif (val > hi) {
+        out = hi;
+    }
+    else {
+        out = val;
+    }
 }
 ```
 
-Cross-module routines are called by qualified name — no `uses` declaration is needed:
+Routines support simple counted loops. A single bound iterates from 0 to N-1:
+
+```fal
+routine Sum(int count) -> (int total) {
+    total = 0;
+
+    for i in count {
+        total = total + i;
+    }
+}
+```
+
+An explicit range may also be provided:
+
+```fal
+routine SumRange(int start, int stop) -> (int total) {
+    total = 0;
+
+    for i in start:stop {
+        total = total + i;
+    }
+}
+```
+
+Loop variables are scoped to the loop body and may not shadow an existing visible variable.
+Cross-module routines are called by qualified name:
 
 ```fal
 float safe = math_utils::clamp(input, 0.0, 1.0);
@@ -320,7 +351,7 @@ for (auto &name : engine.get_loaded_autotuners())
 ### Key methods
 
 | Method | Description |
-|--------|-------------|
+| -------- | ------------- |
 | `load_fal_file(path)` | Parse and load a `.fal` file; recursively resolves imports and compiles `ffimport` wrappers |
 | `run_autotuner(name, inputs)` | Execute a named autotuner, returns `FunctionResult` |
 | `run_routine(name, inputs)` | Execute a standalone routine |
@@ -342,7 +373,7 @@ falcon-run <autotuner-name> <file.fal> [more.fal ...] [options]
 ### Options
 
 | Option | Description |
-|--------|-------------|
+| -------- | ------------- |
 | `--list` | List all autotuners found in the loaded files |
 | `--param k=v` | Pass an initial parameter (repeatable); type is inferred |
 | `--log-level L` | Set log level: `trace`, `debug`, `info`, `warn`, `error` |
@@ -351,7 +382,7 @@ falcon-run <autotuner-name> <file.fal> [more.fal ...] [options]
 ### Exit codes
 
 | Code | Meaning |
-|------|---------|
+| ------ | --------- |
 | `0` | Success |
 | `1` | Usage / argument error |
 | `2` | File load failure |
@@ -433,7 +464,7 @@ falcon-test <file.fal> [file2.fal ...] [options]
 ### Options
 
 | Option | Description |
-|--------|-------------|
+| -------- | ------------- |
 | `--log-level L` | Set log level: `trace`, `debug`, `info`, `warn`, `error` (default: `warn`) |
 | `--dump` | Print the generated `.fal` source and exit — useful for debugging |
 | `--help` | Print help |
@@ -441,7 +472,7 @@ falcon-test <file.fal> [file2.fal ...] [options]
 ### Exit codes
 
 | Code | Meaning |
-|------|---------|
+| ------ | --------- |
 | `0` | All tests in all suites passed |
 | `1` | Usage / argument error |
 | `2` | File load or generation error |
