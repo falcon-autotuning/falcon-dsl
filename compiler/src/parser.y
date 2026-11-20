@@ -30,29 +30,67 @@
   std::unique_ptr<falcon::atc::Program> program_root;
 
   // ── Scope tracking for variable declarations ─────────────────────────────
-  std::set<std::string> autotuner_scope;
-  std::set<std::string> autotuner_input_params;
-  std::set<std::string> autotuner_output_params;
-  std::set<std::string> state_local_scope;
-  std::set<std::string> state_input_params;
-  bool parsing_routine_params = false;
-  std::set<std::string> routine_input_params;
-  bool in_state_body = false;
+  enum class ScopeKind {
+    Autotuner,
+    State,
+    Struct,
+    Routine,
+    Loop
+  };
 
-  void clear_autotuner_scope() {
-    autotuner_scope.clear();
-    autotuner_input_params.clear();
-    autotuner_output_params.clear();
-    state_local_scope.clear();
-    state_input_params.clear();
+  struct VariableInfo {
+      bool readable;
+      bool writeable;
+  };
+
+  struct Scope {
+      ScopeKind kind;
+      std::unordered_map<std::string, VariableInfo> variables;
+  };
+
+  std::vector<Scope> lexical_scopes;
+  void push_scope(ScopeKind kind) {
+      lexical_scopes.push_back({kind, {}});
   }
 
-  void clear_state_scope() {
-    state_local_scope.clear();
-    state_input_params.clear();
+  void pop_scope() {
+      if (!lexical_scopes.empty()) {
+          lexical_scopes.pop_back();
+      }
   }
 
-  // ── Struct context tracking ───────────────────────────────────────────────
+  void declare_variable(
+      const std::string& name,
+      bool readable = true,
+      bool writeable = true)
+  {
+      if (!lexical_scopes.empty()) {
+          lexical_scopes.back().variables.emplace(
+              name,
+              VariableInfo{
+                  readable,
+                  writeable
+              });
+      }
+  }
+
+  struct LookupResult {
+      VariableInfo variable;
+      ScopeKind defining_scope;
+  };
+
+  #include <optional>
+
+  std::optional<LookupResult> lookup_variable(const std::string& name) {
+      for (auto it = lexical_scopes.rbegin(); it != lexical_scopes.rend(); ++it) {
+          auto found = it->variables.find(name);
+          if (found != it->variables.end()) {
+              return LookupResult{found->second, it->kind};
+          }
+      }
+      return std::nullopt;
+  }
+
   // struct_known_types is DEFINED in ParseError.cpp and DECLARED extern in
   // ParseError.hpp (which is included via %code requires above).
   // Do NOT redefine it here — that would shadow the cross-TU definition and
@@ -60,9 +98,6 @@
 
   // module_known_types is parser-session-only (not needed cross-TU).
   std::set<std::string> module_known_types;
-
-  // struct_field_scope tracks field names inside the struct being parsed.
-  std::set<std::string> struct_field_scope;  
 
 // While parsing a struct body, this map holds the generic param names.
   // e.g. for  struct Box<T>  →  current_generic_params = {"T"}
@@ -74,77 +109,38 @@
   // Used when resolving  Box<int>  in type_spec to validate arg count.
   std::map<std::string, std::vector<std::string>> struct_generic_params_map;
 
-  // True while parsing a routine body that belongs to a struct.
-  bool in_struct_routine = false;
-
-  void enter_struct_routine() {
-    in_struct_routine = true;
-    autotuner_input_params.clear();
-    autotuner_output_params.clear();
-    state_local_scope.clear();
-    state_input_params.clear();
-  }
-
-  void leave_struct_routine() {
-    in_struct_routine = false;
-    autotuner_input_params.clear();
-    autotuner_output_params.clear();
-    state_local_scope.clear();
-    state_input_params.clear();
-  }
-
-  std::vector<std::set<std::string>> loop_scopes;
-
-  bool is_loop_variable(const std::string& name) {
-      for (auto it = loop_scopes.rbegin();
-          it != loop_scopes.rend();
+  bool is_variable_declared(const std::string& name) {
+      for (auto it = lexical_scopes.rbegin();
+          it != lexical_scopes.rend();
           ++it) {
-          if (it->count(name)) {
+          if (it->variables.count(name)) {
               return true;
           }
       }
       return false;
   }
 
-  void push_loop_scope() {
-      loop_scopes.emplace_back();
-  }
-
-  void pop_loop_scope() {
-      loop_scopes.pop_back();
-  }
-
-  void declare_loop_variable(const std::string& name) {
-      if (!loop_scopes.empty()) {
-          loop_scopes.back().insert(name);
+  bool is_redeclaration(const std::string& name)
+  {
+      if (lexical_scopes.empty()) {
+          return false;
       }
+
+      return lexical_scopes.back().variables.count(name) > 0;
   }
 
-  bool is_variable_declared(const std::string& name) {
-      if (is_loop_variable(name)) return true;
+  bool is_visible_variable(const std::string& name)
+  {
+      for (auto it = lexical_scopes.rbegin();
+          it != lexical_scopes.rend();
+          ++it) {
 
-      if (in_struct_routine && struct_field_scope.count(name) > 0) return true;
-      return autotuner_scope.count(name) > 0 ||
-            autotuner_input_params.count(name) > 0 ||
-            autotuner_output_params.count(name) > 0 ||
-            state_local_scope.count(name) > 0 ||
-            state_input_params.count(name) > 0;
-  }
+          if (it->variables.count(name)) {
+              return true;
+          }
+      }
 
-  bool is_redeclaration(const std::string& name, bool in_state) {
-    if (is_loop_variable(name))
-      return true;
-    if (in_state) {
-      return autotuner_scope.count(name) > 0 ||
-             autotuner_input_params.count(name) > 0 ||
-             autotuner_output_params.count(name) > 0 ||
-             state_input_params.count(name) > 0 ||
-             state_local_scope.count(name) > 0;
-    } else {
-      return autotuner_scope.count(name) > 0 ||
-             autotuner_input_params.count(name) > 0 ||
-             autotuner_output_params.count(name) > 0;
-    }
+      return false;
   }
 
   void set_stmt_location(falcon::atc::Stmt* stmt,
@@ -190,7 +186,7 @@
 %type <std::vector<std::string>> generic_param_decl_list
 %type <std::vector<std::unique_ptr<Stmt>>> autotuner_var_decls routine_body routine_body_stmts 
 %type <std::unique_ptr<VarDeclStmt>> var_decl_stmt struct_field_decl
-%type <std::string> entry_state qualified_name primitive_type_name
+%type <std::string> entry_state qualified_name 
 %type <std::vector<std::unique_ptr<Expr>>> entry_params
 %type <std::vector<StateDecl>> state_list
 %type <std::unique_ptr<StateDecl>> state_decl
@@ -205,7 +201,6 @@
 %type <std::vector<CallArg>> call_arg_list 
 %type <std::unique_ptr<CallArg>> call_arg
 %type <std::unique_ptr<RoutineDecl>> routine_decl
-%type <std::vector<StructDecl>>        struct_decl_list
 %type <std::unique_ptr<StructDecl>>    struct_decl
 %type <std::vector<VarDeclStmt>>       struct_field_list
 %type <std::vector<RoutineDecl>> struct_routine_list
@@ -218,6 +213,7 @@
     std::unique_ptr<AutotunerDecl>,
     std::unique_ptr<FFImportDecl>
 >> > program_items
+%type <bool> opt_mock 
 
 %type <std::variant<
     std::unique_ptr<StructDecl>,
@@ -246,6 +242,7 @@
 program
     : import_list[imps] program_items[items]
       {
+        lexical_scopes.clear();
         auto prog = std::make_unique<Program>();
         prog->imports = std::move($imps);
         for (auto& item : $items) {
@@ -317,20 +314,10 @@ generic_param_decl_list[result]
       }
     ;
 
-struct_decl_list[result]
-    : %empty
-      { $result = std::vector<StructDecl>(); }
-    | struct_decl_list[prev] struct_decl[next]
-      {
-        $result = std::move($prev);
-        $result.push_back(std::move(*$next));
-      }
-    ;
-
 struct_decl[result]
     : STRUCT IDENTIFIER[name] generic_param_decl_list[gparams] LBRACE
       {
-        struct_field_scope.clear();
+        push_scope(ScopeKind::Struct);
         // Register the bare name so we can look up its generic params later.
         struct_known_types.insert($name);
         // Save generic param names so type_spec can accept them inside the body.
@@ -342,7 +329,7 @@ struct_decl[result]
       struct_field_list[fields] struct_routine_list[routines] RBRACE
       {
         current_generic_params.clear();
-        struct_field_scope.clear();
+        pop_scope();
         $result = std::make_unique<StructDecl>(
             std::move($name),
             std::move($gparams),
@@ -368,7 +355,7 @@ struct_field_list[result]
 struct_field_decl[result]
     : type_spec[type] IDENTIFIER[name] SEMICOLON
       {
-        struct_field_scope.insert($name);
+        declare_variable($name);
         auto decl = std::make_unique<VarDeclStmt>(
             std::move(*$type), std::move($name), std::nullopt);
         decl->decl_scope = VarDeclStmt::DeclScope::StructField;
@@ -376,7 +363,7 @@ struct_field_decl[result]
       }
     | type_spec[type] IDENTIFIER[name] ASSIGN expr[default_val] SEMICOLON
       {
-        struct_field_scope.insert($name);
+        declare_variable($name);
         auto decl = std::make_unique<VarDeclStmt>(
             std::move(*$type), std::move($name),
             std::make_optional(std::move($default_val)));
@@ -393,12 +380,8 @@ struct_routine_list[result]
     : %empty
       { $result = std::vector<RoutineDecl>(); }
     | struct_routine_list[prev] 
-      {
-        enter_struct_routine();
-      }
       routine_decl[next]
       {
-        leave_struct_routine();
         $result = std::move($prev);
         $result.push_back(std::move(*$next));
       }
@@ -428,13 +411,13 @@ routine_body_stmts[result]
 loop_var[result]
     : FOR IDENTIFIER[var] IN
       {
-          push_loop_scope();
-          if (is_redeclaration($var, true)) {
+          if (is_visible_variable($var)) {
               error(@var,
                     "Loop variable shadows existing variable: " + $var);
               YYABORT;
           }
-          declare_loop_variable($var);
+          push_scope(ScopeKind::Loop);
+          declare_variable($var, true, false);
           $result = std::move($var);
       }
     ;
@@ -461,7 +444,7 @@ for_stmt[result]
       for_range[range]
       LBRACE routine_body_stmts[body] RBRACE
       {
-          pop_loop_scope();
+          pop_scope();
 
           auto stmt =
               std::make_unique<ForStmt>(
@@ -487,24 +470,34 @@ struct_routine_stmt[result]
       }
     | IDENTIFIER[name] ASSIGN expr[val] SEMICOLON
       {
-        if (struct_field_scope.count($name) > 0) {
-          $result = std::make_unique<StructFieldAssignStmt>(
-              std::make_unique<VarExpr>("this"),
-              std::move($name),
-              std::move($val));
-        } else if (is_variable_declared($name)) {
-          if (autotuner_input_params.count($name) > 0 ||
-              state_input_params.count($name) > 0) {
-            error(@name, "Cannot assign to read-only parameter: " + $name);
-          }
-          std::vector<AssignTarget> targets;
-          targets.push_back(AssignTarget($name));
-          $result = std::make_unique<AssignStmt>(
-              std::move(targets),
-              std::move($val));
+        auto info = lookup_variable($name);
+        if (!info) {
+            error(@name,
+                  "Undefined variable: " + $name);
+            YYABORT;
+        }
+        if (info->defining_scope == ScopeKind::Struct) {
+
+            $result =
+                std::make_unique<StructFieldAssignStmt>(
+                    std::make_unique<VarExpr>("this"),
+                    std::move($name),
+                    std::move($val));
+
         } else {
-          error(@name, "Undefined variable: " + $name);
-          YYABORT;
+
+            std::vector<AssignTarget> targets;
+            targets.push_back(AssignTarget($name));
+
+            $result =
+                std::make_unique<AssignStmt>(
+                    std::move(targets),
+                    std::move($val));
+        }
+        if (!info->variable.writeable) {
+            error(@name,
+                  "Cannot assign to read-only parameter: " + $name);
+            YYABORT;
         }
         set_stmt_location($result.get(), @name);
       }
@@ -596,8 +589,6 @@ ffimport_string_list[result]
         $result = std::move($existing);
         $result.push_back(std::move($next));
       }
-    | %empty
-      { $result = std::vector<std::string>(); }
     ;
 
 import_list[result]
@@ -616,10 +607,15 @@ import_list[result]
 // AUTOTUNER DECLARATION
 // ============================================================================
 
+opt_mock[is_mock]
+    : MOCK   { $is_mock = true; }
+    | %empty { $is_mock = false; }
+    ;
+
 autotuner_decl[result]
-    : AUTOTUNER IDENTIFIER[name]
+    : opt_mock[is_mock] AUTOTUNER IDENTIFIER[name]
       {
-        clear_autotuner_scope();
+        push_scope(ScopeKind::Autotuner);
       }
       input_params[inputs]
       ARROW
@@ -630,6 +626,7 @@ autotuner_decl[result]
         state_list[states]
       RBRACE
       {
+        pop_scope();
         $result = std::make_unique<AutotunerDecl>(
           std::move($name),
           std::move($inputs),
@@ -638,34 +635,11 @@ autotuner_decl[result]
           std::move($entry),
           std::move($params),
           std::move($states),
-          false
-        );
-      }
-    | MOCK AUTOTUNER IDENTIFIER[name]
-      {
-        clear_autotuner_scope();
-      }
-      input_params[inputs]
-      ARROW
-      output_params[outputs]
-      LBRACE
-        autotuner_var_decls[vars]
-        entry_state[entry] entry_params[params] SEMICOLON
-        state_list[states]
-      RBRACE
-      {
-        $result = std::make_unique<AutotunerDecl>(
-          std::move($name),
-          std::move($inputs),
-          std::move($outputs),
-          std::move($vars),
-          std::move($entry),
-          std::move($params),
-          std::move($states),
-          true
+          $is_mock
         );
       }
     ;
+
 
 // ============================================================================
 // PARAMETERS
@@ -675,7 +649,7 @@ input_params[result]
     : LPAREN param_list[params] RPAREN
       {
         for (const auto& p : $params) {
-          autotuner_input_params.insert(p->name);
+          declare_variable(p->name, true, false);
         }
         $result = std::move($params);
       }
@@ -689,7 +663,7 @@ output_params[result]
     : LPAREN param_list[params] RPAREN
       {
         for (const auto& p : $params) {
-          autotuner_output_params.insert(p->name);
+          declare_variable(p->name);
         }
         $result = std::move($params);
       }
@@ -858,14 +832,13 @@ state_list[result]
     ;
 
 state_decl[result]
-    : STATE IDENTIFIER[name] 
+    : STATE IDENTIFIER[name]
       {
-        clear_state_scope();
-        in_state_body = true;
+          push_scope(ScopeKind::State);
       }
       state_params[params] LBRACE stmt_list[stmts] RBRACE
       {
-        in_state_body = false;
+        pop_scope();
         $result = std::make_unique<StateDecl>(
           std::move($name),
           std::move($params),
@@ -878,7 +851,7 @@ state_params[result]
     : LPAREN param_list[params] RPAREN
       {
         for (const auto& p : $params) {
-          state_input_params.insert(p->name);
+          declare_variable(p->name, true, false);
         }
         $result = std::move($params);
       }
@@ -1012,13 +985,18 @@ assign_target_list[result]
 assign_target[result]
     : IDENTIFIER[name]
       {
-        if (!is_variable_declared($name)) {
-          error(@name, "Undefined variable: " + $name);
-          YYABORT;
+        auto info = lookup_variable($name);
+
+        if (!info) {
+            error(@name,
+                  "Undefined variable: " + $name);
+            YYABORT;
         }
-        if (autotuner_input_params.count($name) > 0 ||
-            state_input_params.count($name) > 0) {
-          error(@name, "Cannot assign to read-only parameter: " + $name);
+
+        if (!info->variable.writeable) {
+            error(@name,
+                  "Cannot assign to read-only parameter: " + $name);
+            YYABORT;
         }
         $result = std::make_unique<AssignTarget>($name);
       }
@@ -1027,31 +1005,26 @@ assign_target[result]
 var_decl_stmt[result]
     : type_spec[type] IDENTIFIER[name] SEMICOLON
       {
-        if (is_redeclaration($name, in_state_body)) {
-          error(@name, "Redeclaration of variable: " + $name);
+        if (is_redeclaration($name)) {
+            error(@name, "Redeclaration of variable: " + $name);
+            YYABORT;
         }
-        if (!in_struct_routine) {
-          if (in_state_body) {
-            state_local_scope.insert($name);
-          } else {
-            autotuner_scope.insert($name);
-          }
-        }
-        $result = std::make_unique<VarDeclStmt>(std::move(*$type), std::move($name), std::nullopt);
+
+        declare_variable($name);
+        $result = std::make_unique<VarDeclStmt>(
+          std::move(*$type), 
+          std::move($name), 
+          std::nullopt);
         set_stmt_location($result.get(), @name);
       }
     | type_spec[type] IDENTIFIER[name] ASSIGN expr[init] SEMICOLON
       {
-        if (is_redeclaration($name, in_state_body)) {
-          error(@name, "Redeclaration of variable: " + $name);
+        if (is_redeclaration($name)) {
+            error(@name, "Redeclaration of variable: " + $name);
+            YYABORT;
         }
-        if (!in_struct_routine) {
-          if (in_state_body) {
-            state_local_scope.insert($name);
-          } else {
-            autotuner_scope.insert($name);
-          }
-        }
+
+        declare_variable($name);
         $result = std::make_unique<VarDeclStmt>(
             std::move(*$type), std::move($name),
             std::make_optional(std::move($init)));
@@ -1066,11 +1039,11 @@ var_decl_stmt[result]
 routine_decl[result]
     : ROUTINE IDENTIFIER[name]
       {
-        parsing_routine_params = true;
+        push_scope(ScopeKind::Routine);
       }
       input_params[inputs] ARROW output_params[outputs] routine_body[body]
       {
-        parsing_routine_params = false;
+        pop_scope();
         $result = std::make_unique<RoutineDecl>(
             std::move($name),
             std::move($inputs),
