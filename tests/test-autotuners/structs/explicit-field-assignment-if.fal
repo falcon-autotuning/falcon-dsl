@@ -1,0 +1,39 @@
+struct Counter {
+    int value;
+
+    routine Set(int v) -> () {
+
+        if (true) {
+            this.value = v;
+        }
+    }
+
+    routine Get -> (int v) {
+        v = value;
+    }
+
+    routine New -> (Counter c) {
+        c.value = 0;
+    }
+}
+
+autotuner ExplicitFieldAssignmentIf
+    -> (int result)
+{
+    result = 0;
+
+    start -> run;
+
+    state run {
+
+        Counter c =
+            Counter.New();
+
+        c.Set(123);
+
+        result =
+            c.Get();
+
+        terminal;
+    }
+}

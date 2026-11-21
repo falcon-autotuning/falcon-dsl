@@ -1,0 +1,44 @@
+struct Quantity {
+    int value;
+
+    routine New(int v) -> (Quantity q) {
+        q.value = v;
+    }
+
+    routine Get -> (int v) {
+        v = this.value;
+    }
+}
+
+struct Wrapper {
+    Quantity q;
+
+    routine New(Quantity q) -> (Wrapper w) {
+        w.q = q;
+    }
+
+    routine Value -> (int value) {
+        value = 0;
+
+        if (true) {
+            value = q.Get();
+        }
+    }
+}
+
+autotuner ImplicitFieldMethodIf(int x) -> (int result) {
+    result = 0;
+
+    start -> run;
+
+    state run {
+        Wrapper w =
+            Wrapper.New(
+                Quantity.New(x)
+            );
+
+        result = w.Value();
+
+        terminal;
+    }
+}

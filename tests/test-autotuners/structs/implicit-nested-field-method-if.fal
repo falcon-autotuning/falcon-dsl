@@ -1,0 +1,55 @@
+struct Quantity {
+    int value;
+
+    routine New(int v) -> (Quantity q) {
+        q.value = v;
+    }
+
+    routine Get -> (int v) {
+        v = this.value;
+    }
+}
+
+struct Inner {
+    Quantity q;
+
+    routine New(Quantity q) -> (Inner i) {
+        i.q = q;
+    }
+}
+
+struct Outer {
+    Inner inner;
+
+    routine New(Inner inner) -> (Outer o) {
+        o.inner = inner;
+    }
+
+    routine Value -> (int value) {
+        value = 0;
+
+        if (true) {
+            value = inner.q.Get();
+        }
+    }
+}
+
+autotuner ImplicitNestedFieldMethodIf(int x) -> (int result) {
+    result = 0;
+
+    start -> run;
+
+    state run {
+
+        Outer o =
+            Outer.New(
+                Inner.New(
+                    Quantity.New(x)
+                )
+            );
+
+        result = o.Value();
+
+        terminal;
+    }
+}

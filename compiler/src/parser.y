@@ -164,12 +164,35 @@
   std::unique_ptr<falcon::atc::AssignTarget>
   expr_to_assign_target(std::unique_ptr<falcon::atc::Expr> expr)
   {
-      if (auto* var = dynamic_cast<falcon::atc::VarExpr*>(expr.get())) {
+      if (auto* var = dynamic_cast<falcon::atc::VarExpr*>(expr.get()))
+      {
+          auto lookup = lookup_variable(var->name);
+
+          bool is_implicit_struct_field =
+              lookup.has_value() &&
+              lookup->defining_scope == ScopeKind::Struct;
+
+          // Rewrite:
+          //
+          //     value = x;
+          //
+          // into:
+          //
+          //     this.value = x;
+          //
+          if (is_implicit_struct_field)
+          {
+              return std::make_unique<falcon::atc::AssignTarget>(
+                  std::make_unique<falcon::atc::VarExpr>("this"),
+                  var->name);
+          }
+
           return std::make_unique<falcon::atc::AssignTarget>(
               std::move(var->name));
       }
 
-      if (auto* member = dynamic_cast<falcon::atc::MemberExpr*>(expr.get())) {
+      if (auto* member = dynamic_cast<falcon::atc::MemberExpr*>(expr.get()))
+      {
           return std::make_unique<falcon::atc::AssignTarget>(
               std::move(member->object),
               std::move(member->member));
@@ -511,7 +534,7 @@ struct_routine_stmt[result]
         $result = std::move($vd);
         set_stmt_location($result.get(), @vd);
       }
-    | IF LPAREN expr[cond] RPAREN LBRACE
+    | IF LPAREN expr[cond] RPAREN
       {
         push_scope(ScopeKind::Conditional);
       }
@@ -519,7 +542,7 @@ struct_routine_stmt[result]
       {
         pop_scope();
       }
-      RBRACE elif_chain[else_b]
+      elif_chain[else_b]
       {
         $result = std::make_unique<IfStmt>(
             std::move($cond),

@@ -327,3 +327,103 @@ TEST_F(StructsTest, NestedStructMethodMultipleReturn) {
 
   EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(5));
 }
+
+TEST_F(StructsTest, ImplicitFieldMethod) {
+  ParameterMap params;
+  params["x"] = static_cast<int64_t>(42);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/structs/implicit-field-method.fal"),
+      "ImplicitFieldMethod", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(42));
+}
+
+TEST_F(StructsTest, ImplicitNestedFieldMethod) {
+  ParameterMap params;
+  params["x"] = static_cast<int64_t>(123);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/structs/implicit-nested-field-method.fal"),
+      "ImplicitNestedFieldMethod", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(123));
+}
+
+TEST_F(StructsTest, ImplicitFieldMethodIf) {
+  ParameterMap params;
+  params["x"] = static_cast<int64_t>(42);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/structs/implicit-field-method-if.fal"),
+      "ImplicitFieldMethodIf", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 42);
+}
+
+TEST_F(StructsTest, ImplicitNestedFieldMethodIf) {
+  ParameterMap params;
+  params["x"] = static_cast<int64_t>(123);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/structs/implicit-nested-field-method-if.fal"),
+      "ImplicitNestedFieldMethodIf", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 123);
+}
+
+TEST_F(StructsTest, ImplicitFieldAssignmentIf) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/structs/implicit-field-assignment-if.fal"),
+      "ImplicitFieldAssignmentIf", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(123));
+}
+
+TEST_F(StructsTest, ExplicitFieldAssignmentIf) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/structs/explicit-field-assignment-if.fal"),
+      "ExplicitFieldAssignmentIf", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(123));
+}
