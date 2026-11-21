@@ -221,3 +221,52 @@ TEST_F(RoutineTest, TrailingCommaCallArgs) {
   ASSERT_TRUE(success);
   EXPECT_EQ(std::get<int64_t>(outputs[0]), 15);
 }
+
+TEST_F(RoutineTest, RoutineMultipleReturnInRoutine) {
+  ParameterMap params;
+  params["n"] = static_cast<int64_t>(5);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/routines/multiple-return-routine.fal"),
+      "RoutineMultipleReturnInRoutine", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 11);
+}
+
+TEST_F(RoutineTest, RoutineMultipleReturnInState) {
+  ParameterMap params;
+  params["n"] = static_cast<int64_t>(5);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/routines/multiple-return-state.fal"),
+      "MultipleReturnState", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 11);
+}
+
+TEST_F(RoutineTest, MultipleReturnOrdering) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/routines/multiple-return-ordering.fal"),
+      "MultipleReturnOrdering", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  // Ensures values are bound in declaration order:
+  // first -> a (10)
+  // second -> b (20)
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(1020));
+}

@@ -1,0 +1,32 @@
+routine Do(int a)
+    -> (int b, int c)
+{
+    b = a;
+    c = a + 1;
+}
+
+routine Wrapper(int x)
+    -> (int y)
+{
+    int a;
+    int b;
+
+    a, b = Do(x);
+
+    y = a + b;
+}
+
+autotuner RoutineMultipleReturnInRoutine(
+    int n
+) -> (
+    int result
+) {
+    result = 0;
+
+    start -> run;
+
+    state run {
+        result = Wrapper(n);
+        terminal;
+    }
+}

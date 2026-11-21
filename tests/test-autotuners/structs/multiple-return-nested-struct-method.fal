@@ -1,0 +1,67 @@
+struct Pair {
+
+    int a;
+    int b;
+
+    routine New(
+        int a,
+        int b
+    ) -> (
+        Pair p
+    ) {
+        p.a = a;
+        p.b = b;
+    }
+
+    routine Values
+        -> (
+            int first,
+            int second
+        ) {
+        first = this.a;
+        second = this.b;
+    }
+}
+
+struct Wrapper {
+
+    Pair pair;
+
+    routine New(
+        Pair pair
+    ) -> (
+        Wrapper w
+    ) {
+        w.pair = pair;
+    }
+}
+
+autotuner NestedStructMethodMultipleReturn
+    -> (
+        int result
+    ) {
+
+    result = 0;
+
+    start -> run;
+
+    state run {
+
+        Wrapper w =
+            Wrapper.New(
+                Pair.New(
+                    2,
+                    3
+                )
+            );
+
+        int a;
+        int b;
+
+        a, b = w.pair.Values();
+
+        result = a + b;
+
+        terminal;
+    }
+}

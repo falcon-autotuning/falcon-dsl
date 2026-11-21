@@ -1,0 +1,31 @@
+routine MakePair()
+    -> (
+        int first,
+        int second
+    ) {
+
+    first = 10;
+    second = 20;
+}
+
+autotuner MultipleReturnOrdering
+    -> (
+        int result
+    ) {
+
+    result = 0;
+
+    start -> run;
+
+    state run {
+
+        int a;
+        int b;
+
+        a, b = MakePair();
+
+        result = a * 100 + b;
+
+        terminal;
+    }
+}

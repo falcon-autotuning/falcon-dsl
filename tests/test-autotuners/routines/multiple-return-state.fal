@@ -1,0 +1,34 @@
+routine Do(int a)
+    -> (
+        int b,
+        int c
+    )
+{
+    b = a;
+    c = a + 1;
+}
+
+autotuner MultipleReturnState(
+    int n
+)
+    -> (
+        int result
+    )
+{
+
+    result = 0;
+
+    start -> run;
+
+    state run {
+
+        int a;
+        int b;
+
+        a, b = Do(n);
+
+        result = a + b;
+
+        terminal;
+    }
+}

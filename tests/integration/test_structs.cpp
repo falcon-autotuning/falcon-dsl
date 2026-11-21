@@ -281,3 +281,49 @@ TEST_F(StructsTest, GenericPairTrailingComma) {
   EXPECT_EQ(std::get<int64_t>(outputs[0]), 7);
   EXPECT_EQ(std::get<std::string>(outputs[1]), "hello");
 }
+
+TEST_F(StructsTest, StructMethodMultipleReturnInRoutine) {
+  ParameterMap params;
+  params["n"] = static_cast<int64_t>(5);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/structs/multiple-return-struct-method.fal"),
+      "StructMethodMultipleReturnInRoutine", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 5);
+}
+
+TEST_F(StructsTest, StructMethodMultipleReturnInState) {
+  ParameterMap params;
+  params["n"] = static_cast<int64_t>(5);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/structs/multiple-return-in-state.fal"),
+      "StructMethodMultipleReturnInState", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 5);
+}
+
+TEST_F(StructsTest, NestedStructMethodMultipleReturn) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/structs/multiple-return-nested-struct-method.fal"),
+      "NestedStructMethodMultipleReturn", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(5));
+}

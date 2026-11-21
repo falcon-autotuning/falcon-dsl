@@ -1,0 +1,45 @@
+
+struct Pair {
+
+    int a;
+    int b;
+
+    routine New(
+        int a,
+        int b
+    ) -> (
+        Pair p
+    ) {
+        p.a = a;
+        p.b = b;
+    }
+
+    routine Values
+        -> (
+            int x,
+            int y
+        ) {
+        x = this.a;
+        y = this.b;
+    }
+}
+
+autotuner StructMethodMultipleReturnInState
+    -> (
+        int result
+    ) {
+
+    result = 0;
+
+    start -> run;
+
+    state run {
+        int a;
+        int b;
+        Pair p =
+            Pair.New(2, 3);
+        a,b = p.Values();
+        result = a + b;
+        terminal;
+    }
+}
