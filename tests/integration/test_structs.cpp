@@ -184,3 +184,64 @@ TEST_F(StructsTest, NestedStruct) {
   EXPECT_EQ(std::get<int64_t>(outputs[0]), 10);
   EXPECT_EQ(std::get<std::string>(outputs[1]), "test");
 }
+
+TEST_F(StructsTest, NestedFieldMethodCall) {
+  ParameterMap params;
+  params["x"] = static_cast<int64_t>(5);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/structs/nested-field-method.fal"),
+      "NestedFieldMethod", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 123);
+}
+
+TEST_F(StructsTest, NestedFieldReturn) {
+  ParameterMap params;
+  params["x"] = static_cast<int64_t>(77);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/structs/nested-field-return.fal"),
+      "NestedFieldReturn", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(77));
+}
+
+TEST_F(StructsTest, TripleNestedChain) {
+  ParameterMap params;
+  params["x"] = static_cast<int64_t>(314);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/structs/triple-nested-chain.fal"),
+      "TripleNestedChain", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(314));
+}
+
+TEST_F(StructsTest, ChainedMethodArgument) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/structs/chained-method-argument.fal"),
+      "ChainedMethodArgument", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(55));
+}

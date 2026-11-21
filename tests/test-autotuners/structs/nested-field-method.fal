@@ -1,0 +1,44 @@
+struct Quantity {
+    int value;
+
+    routine New(int v) -> (Quantity q) {
+        q.value = v;
+    }
+
+    routine Set(int v) -> () {
+        this.value = v;
+    }
+
+    routine Get -> (int v) {
+        v = this.value;
+    }
+}
+
+struct Wrapper {
+    Quantity q;
+
+    routine New(Quantity q) -> (Wrapper w) {
+        w.q = q;
+    }
+}
+
+autotuner NestedFieldMethod(int x) -> (int result) {
+    result = 0;
+
+    start -> run;
+
+    state run {
+        Quantity q = Quantity.New(x);
+        Wrapper w = Wrapper.New(q);
+
+        w.q.Set(123);
+
+        result = w.q.Get();
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}

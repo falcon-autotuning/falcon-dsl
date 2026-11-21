@@ -1,0 +1,52 @@
+routine Identity(int x) -> (int out) {
+    out = x;
+}
+
+struct Quantity {
+    int value;
+
+    routine New(int x) -> (Quantity q) {
+        q.value = x;
+    }
+
+    routine Set(int x) -> () {
+        this.value = x;
+    }
+
+    routine Get -> (int out) {
+        out = this.value;
+    }
+}
+
+struct Wrapper {
+    Quantity q;
+
+    routine New(Quantity q) -> (Wrapper w) {
+        w.q = q;
+    }
+}
+
+autotuner ChainedMethodArgument -> (int result) {
+
+    result = 0;
+
+    start -> run;
+
+    state run {
+
+        Wrapper w =
+            Wrapper.New(
+                Quantity.New(0));
+
+        w.q.Set(
+            Identity(55));
+
+        result = w.q.Get();
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}

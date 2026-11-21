@@ -1,0 +1,39 @@
+struct Quantity {
+    int value;
+
+    routine New(int v) -> (Quantity q) {
+        q.value = v;
+    }
+
+    routine Value -> (int v) {
+        v = this.value;
+    }
+}
+
+struct Wrapper {
+    Quantity q;
+
+    routine New(Quantity q) -> (Wrapper w) {
+        w.q = q;
+    }
+}
+
+autotuner NestedFieldReturn(int x) -> (int result) {
+    result = 0;
+
+    start -> run;
+
+    state run {
+        Wrapper w =
+            Wrapper.New(
+                Quantity.New(x));
+
+        result = w.q.Value();
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}

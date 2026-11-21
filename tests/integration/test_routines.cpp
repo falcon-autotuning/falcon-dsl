@@ -172,3 +172,37 @@ TEST_F(RoutineTest, RoutineCallAsMethodArgument) {
   ASSERT_EQ(outputs.size(), 1);
   EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(5));
 }
+
+TEST_F(RoutineTest, ForLoopMethodRange) {
+  ParameterMap params;
+  params.emplace("n", static_cast<int64_t>(5));
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/routines/for-loop-method-range.fal"),
+      "ForLoopMethodRange", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(10));
+}
+
+TEST_F(RoutineTest, ForLoopNestedMethodRange) {
+  ParameterMap params;
+  params.emplace("n", static_cast<int64_t>(5));
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/routines/for-loop-nested-method-range.fal"),
+      "ForLoopNestedMethodRange", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(10));
+}

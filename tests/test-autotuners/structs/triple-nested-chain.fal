@@ -1,0 +1,49 @@
+struct Value {
+    int x;
+
+    routine New(int x) -> (Value v) {
+        v.x = x;
+    }
+
+    routine Get -> (int out) {
+        out = this.x;
+    }
+}
+
+struct Middle {
+    Value v;
+
+    routine New(Value v) -> (Middle m) {
+        m.v = v;
+    }
+}
+
+struct Outer {
+    Middle m;
+
+    routine New(Middle m) -> (Outer o) {
+        o.m = m;
+    }
+}
+
+autotuner TripleNestedChain(int x) -> (int result) {
+    result = 0;
+
+    start -> run;
+
+    state run {
+
+        Outer o =
+            Outer.New(
+                Middle.New(
+                    Value.New(x)));
+
+        result = o.m.v.Get();
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}

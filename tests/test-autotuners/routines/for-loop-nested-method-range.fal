@@ -1,0 +1,43 @@
+struct Counter {
+    int size;
+
+    routine New(int size) -> (Counter c) {
+        c.size = size;
+    }
+
+    routine Size -> (int out) {
+        out = this.size;
+    }
+}
+
+struct Wrapper {
+    Counter counter;
+
+    routine New(Counter counter) -> (Wrapper w) {
+        w.counter = counter;
+    }
+}
+
+routine SumToWrappedSize(Wrapper w) -> (int sum) {
+    sum = 0;
+
+    for i in w.counter.Size() {
+        sum = sum + i;
+    }
+}
+
+autotuner ForLoopNestedMethodRange(int n) -> (int out) {
+    out = 0;
+
+    start -> run;
+
+    state run {
+        Wrapper w =
+            Wrapper.New(
+                Counter.New(n));
+
+        out = SumToWrappedSize(w);
+
+        terminal;
+    }
+}

@@ -1,0 +1,31 @@
+struct Counter {
+    int size;
+
+    routine New(int size) -> (Counter c) {
+        c.size = size;
+    }
+
+    routine Size -> (int value) {
+        value = this.size;
+    }
+}
+
+routine SumToSize(Counter c) -> (int sum) {
+    sum = 0;
+
+    for i in c.Size() {
+        sum = sum + i;
+    }
+}
+
+autotuner ForLoopMethodRange(int n) -> (int out) {
+    out = 0;
+
+    start -> run;
+
+    state run {
+        Counter c = Counter.New(n);
+        out = SumToSize(c);
+        terminal;
+    }
+}
