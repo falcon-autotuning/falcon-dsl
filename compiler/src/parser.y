@@ -223,6 +223,16 @@
 %type <std::vector<RoutineDecl>> struct_routine_list
 %type <std::vector<std::unique_ptr<Expr>>> assignment_lhs
 %type <std::vector<std::unique_ptr<TypeDescriptor>>> type_arg_list
+%type <std::vector<std::unique_ptr<ParamDecl>>>
+    param_list_with_optional_trailing_comma
+%type <std::vector<std::unique_ptr<TypeDescriptor>>>
+    type_arg_list_with_optional_trailing_comma
+%type <std::vector<std::unique_ptr<Expr>>>
+    expr_list_with_optional_trailing_comma
+%type <std::vector<CallArg>>
+    call_arg_list_with_optional_trailing_comma
+%type <std::vector<std::string>>
+    identifier_list_with_optional_trailing_comma
 %type <std::vector<std::variant<
     std::unique_ptr<StructDecl>,
     std::unique_ptr<RoutineDecl>,
@@ -322,7 +332,7 @@ generic_param_decl_list[result]
         $result = std::vector<std::string>();
         $result.push_back(std::move($first));
       }
-    | LL IDENTIFIER[first] COMMA identifier_list[rest] GG
+    | LL IDENTIFIER[first] COMMA identifier_list_with_optional_trailing_comma[rest] GG
       {
         $result = std::vector<std::string>();
         $result.push_back(std::move($first));
@@ -613,8 +623,32 @@ autotuner_decl[result]
 // PARAMETERS
 // ============================================================================
 
+param_list[result]
+    : param_decl[first]
+      {
+        $result = std::vector<std::unique_ptr<ParamDecl>>();
+        $result.push_back(std::move($first));
+      }
+    | param_list[existing] COMMA param_decl[next]
+      {
+        $result = std::move($existing);
+        $result.push_back(std::move($next));
+      }
+    ;
+
+param_list_with_optional_trailing_comma[result]
+    : param_list[params]
+      {
+          $result = std::move($params);
+      }
+    | param_list[params] COMMA
+      {
+          $result = std::move($params);
+      }
+    ;
+
 input_params[result]
-    : LPAREN param_list[params] RPAREN
+    : LPAREN param_list_with_optional_trailing_comma[params] RPAREN
       {
         for (const auto& p : $params) {
           declare_variable(p->name, true, false);
@@ -628,7 +662,7 @@ input_params[result]
     ;
 
 output_params[result]
-    : LPAREN param_list[params] RPAREN
+    : LPAREN param_list_with_optional_trailing_comma[params] RPAREN
       {
         for (const auto& p : $params) {
           declare_variable(p->name);
@@ -639,18 +673,6 @@ output_params[result]
       { $result = std::vector<std::unique_ptr<ParamDecl>>(); }
     ;
 
-param_list[result]
-    : param_decl[first]
-      {
-        $result = std::vector<std::unique_ptr<ParamDecl>>();
-        $result.push_back(std::move($first));
-      }
-    | param_list[existing] COMMA param_decl[next]
-      {
-        $result = std::move($existing);
-        $result.push_back(std::move($next));
-      }
-    ;
 
 param_decl[result]
     : type_spec[type] IDENTIFIER[name]
@@ -668,7 +690,6 @@ param_decl[result]
 // ============================================================================
 // TYPES
 // ============================================================================
-
 type_arg_list[result]
     : type_spec[first]
       {
@@ -679,6 +700,17 @@ type_arg_list[result]
       {
         $result = std::move($existing);
         $result.push_back(std::move($next));
+      }
+    ;
+
+type_arg_list_with_optional_trailing_comma[result]
+    : type_arg_list[args]
+      {
+          $result = std::move($args);
+      }
+    | type_arg_list[args] COMMA
+      {
+          $result = std::move($args);
       }
     ;
 
@@ -693,7 +725,7 @@ type_spec[result]
       { $result = std::make_unique<TypeDescriptor>(ParamType::String); }
     | ERROR_KW
       { $result = std::make_unique<TypeDescriptor>(ParamType::Error, "Error"); }
-    | qualified_name[name] LL type_arg_list[args] GG
+    | qualified_name[name] LL type_arg_list_with_optional_trailing_comma[args] GG
       {
         // The base name must be a known generic struct.
         std::string base = $name;
@@ -744,7 +776,6 @@ type_spec[result]
 // AUTOTUNER COMPONENTS
 // ============================================================================
 
-// identifier_list now supports both plain names and Module::symbol qualifiers
 identifier_list[result]
     : qualified_name[first_id]
       {
@@ -758,6 +789,17 @@ identifier_list[result]
       }
     | %empty
       { $result = std::vector<std::string>(); }
+    ;
+
+identifier_list_with_optional_trailing_comma[result]
+    : identifier_list[list]
+      {
+          $result = std::move($list);
+      }
+    | identifier_list[list] COMMA
+      {
+          $result = std::move($list);
+      }
     ;
 
 autotuner_var_decls[result]
@@ -776,7 +818,7 @@ entry_state[result]
     ;
 
 entry_params[result]
-    : LPAREN expr_list[params] RPAREN
+    : LPAREN expr_list_with_optional_trailing_comma[params] RPAREN
       { $result = std::move($params); }
     | %empty
       { $result = std::vector<std::unique_ptr<Expr>>(); }
@@ -816,7 +858,7 @@ state_decl[result]
     ;
 
 state_params[result]
-    : LPAREN param_list[params] RPAREN
+    : LPAREN param_list_with_optional_trailing_comma[params] RPAREN
       {
         for (const auto& p : $params) {
           declare_variable(p->name, true, false);
@@ -864,7 +906,7 @@ stmt[result]
             std::vector<std::unique_ptr<Expr>>());
         set_stmt_location($result.get(), @ARROW);
       }
-    | ARROW IDENTIFIER[target] LPAREN expr_list[args] RPAREN SEMICOLON
+    | ARROW IDENTIFIER[target] LPAREN expr_list_with_optional_trailing_comma[args] RPAREN SEMICOLON
       {
         $result = std::make_unique<TransitionStmt>(
             std::move($target),
@@ -1028,7 +1070,10 @@ postfix_expr[result]
       { $result = std::make_unique<MemberExpr>(std::move($obj), std::move($field));
         set_expr_location($result.get(), @field); }
     // Method call: expr.method(args)
-    | postfix_expr[obj] DOT IDENTIFIER[method] LPAREN call_arg_list[args] RPAREN
+    | postfix_expr[obj] DOT IDENTIFIER[method] 
+      LPAREN
+        call_arg_list_with_optional_trailing_comma[args] 
+      RPAREN
       {
         std::vector<std::unique_ptr<Expr>> arg_exprs;
         arg_exprs.reserve($args.size());
@@ -1041,13 +1086,13 @@ postfix_expr[result]
       { $result = std::make_unique<IndexExpr>(std::move($obj), std::move($idx));
         set_expr_location($result.get(), @LBRACKET); }
     // Plain function call: name(args)
-    | IDENTIFIER[name] LPAREN call_arg_list[args] RPAREN
+    | IDENTIFIER[name] LPAREN call_arg_list_with_optional_trailing_comma[args] RPAREN
       {
         $result = std::make_unique<CallExpr>(std::move($name), std::move($args));
         set_expr_location($result.get(), @name);
       }
     // Module-qualified function call: Module::symbol(args)
-    | IDENTIFIER[ns] COLONCOLON IDENTIFIER[sym] LPAREN call_arg_list[args] RPAREN
+    | IDENTIFIER[ns] COLONCOLON IDENTIFIER[sym] LPAREN call_arg_list_with_optional_trailing_comma[args] RPAREN
       {
         // Encode as a CallExpr with the qualified name; the runtime resolves it.
         $result = std::make_unique<CallExpr>($ns + "::" + $sym, std::move($args));
@@ -1055,7 +1100,6 @@ postfix_expr[result]
       }
     | primary_expr[e] { $result = std::move($e); }
     ;
-
 
 expr_list[result]
     : expr[first]
@@ -1067,6 +1111,17 @@ expr_list[result]
       {
         $result = std::move($existing);
         $result.push_back(std::move($next));
+      }
+    ;
+
+expr_list_with_optional_trailing_comma[result]
+    : expr_list[list]
+      {
+          $result = std::move($list);
+      }
+    | expr_list[list] COMMA
+      {
+          $result = std::move($list);
       }
     ;
 
@@ -1082,6 +1137,17 @@ call_arg_list[result]
       {
         $result = std::move($existing);
         $result.push_back(std::move(*$next));
+      }
+    ;
+
+call_arg_list_with_optional_trailing_comma[result]
+    : call_arg_list[args]
+      {
+          $result = std::move($args);
+      }
+    | call_arg_list[args] COMMA
+      {
+          $result = std::move($args);
       }
     ;
 

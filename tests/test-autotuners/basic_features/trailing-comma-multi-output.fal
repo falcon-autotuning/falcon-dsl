@@ -1,0 +1,17 @@
+autotuner TrailingCommaMultiOutput(int a, int b)
+    -> (
+        int sum,
+        int product,
+    ) {
+
+    sum = 0;
+    product = 0;
+
+    start -> run;
+
+    state run {
+        sum = a + b;
+        product = a * b;
+        terminal;
+    }
+}

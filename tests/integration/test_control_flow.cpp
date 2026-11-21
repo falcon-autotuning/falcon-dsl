@@ -129,3 +129,18 @@ TEST_F(ControlFlowTest, StateForLoopRejected) {
   EXPECT_FALSE(loaded) << "Expected load to fail because for-loops are "
                           "not allowed inside autotuner states.";
 }
+
+TEST_F(ControlFlowTest, TrailingCommaTransitionArgs) {
+  ParameterMap params;
+  params["x"] = static_cast<int64_t>(42);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/control_flow/trailing-comma-transition.fal"),
+      "TrailingCommaTransition", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 42);
+}

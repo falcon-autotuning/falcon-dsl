@@ -206,3 +206,18 @@ TEST_F(RoutineTest, ForLoopNestedMethodRange) {
 
   EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(10));
 }
+
+TEST_F(RoutineTest, TrailingCommaCallArgs) {
+  ParameterMap params;
+  params["a"] = static_cast<int64_t>(10);
+  params["b"] = static_cast<int64_t>(5);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/routines/trailing-comma-call.fal"),
+      "TrailingCommaCall", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 15);
+}

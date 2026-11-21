@@ -1,0 +1,27 @@
+routine Add(
+    int a,
+    int b,
+)
+    -> (
+        int result,
+    ) {
+    result = a + b;
+}
+
+autotuner TrailingCommaCall(int a, int b)
+    -> (
+        int result,
+    ) {
+
+    result = 0;
+
+    start -> run;
+
+    state run {
+        result = Add(
+            a,
+            b,
+        );
+        terminal;
+    }
+}

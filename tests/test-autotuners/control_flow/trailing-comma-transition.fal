@@ -1,0 +1,22 @@
+autotuner TrailingCommaTransition(int x)
+    -> (
+        int result,
+    ) {
+
+    result = 0;
+
+    start -> run;
+
+    state run {
+        -> done(
+            x,
+        );
+    }
+
+    state done(
+        int value,
+    ) {
+        result = value;
+        terminal;
+    }
+}

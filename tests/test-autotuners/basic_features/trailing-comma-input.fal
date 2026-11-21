@@ -1,0 +1,17 @@
+autotuner TrailingCommaInput(
+    int a,
+    int b,
+)
+    -> (
+        int result,
+    ) {
+
+    result = 0;
+
+    start -> run;
+
+    state run {
+        result = a + b;
+        terminal;
+    }
+}

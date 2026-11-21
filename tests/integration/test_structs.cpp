@@ -245,3 +245,39 @@ TEST_F(StructsTest, ChainedMethodArgument) {
 
   EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(55));
 }
+
+TEST_F(StructsTest, GenericBoxTrailingComma) {
+  ParameterMap params;
+  params["x"] = static_cast<int64_t>(42);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/structs/generic-box-trailing-comma.fal"),
+      "GenericBoxTrailingComma", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(42));
+}
+
+TEST_F(StructsTest, GenericPairTrailingComma) {
+  ParameterMap params;
+  params["a"] = static_cast<int64_t>(7);
+  params["b"] = std::string("hello");
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/structs/generic-pair-trailing-comma.fal"),
+      "GenericPairTrailingComma", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 2u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 7);
+  EXPECT_EQ(std::get<std::string>(outputs[1]), "hello");
+}

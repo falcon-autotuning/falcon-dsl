@@ -112,3 +112,54 @@ TEST_F(BasicFeaturesTest, MockRoutine) {
   ASSERT_FALSE(outputs.empty());
   EXPECT_EQ(std::get<int64_t>(outputs[0]), 99);
 }
+
+TEST_F(BasicFeaturesTest, TrailingCommaOutput) {
+  ParameterMap params;
+  params["x"] = static_cast<int64_t>(5);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/basic_features/trailing-comma-output.fal"),
+      "TrailingCommaOutput", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 6);
+}
+
+TEST_F(BasicFeaturesTest, TrailingCommaMultiOutput) {
+  ParameterMap params;
+  params["a"] = static_cast<int64_t>(10);
+  params["b"] = static_cast<int64_t>(5);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/basic_features/trailing-comma-multi-output.fal"),
+      "TrailingCommaMultiOutput", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 2u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 15);
+  EXPECT_EQ(std::get<int64_t>(outputs[1]), 50);
+}
+
+TEST_F(BasicFeaturesTest, TrailingCommaInput) {
+  ParameterMap params;
+  params["a"] = static_cast<int64_t>(10);
+  params["b"] = static_cast<int64_t>(5);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/basic_features/trailing-comma-input.fal"),
+      "TrailingCommaInput", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 15);
+}
