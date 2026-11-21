@@ -144,3 +144,51 @@ TEST_F(ControlFlowTest, TrailingCommaTransitionArgs) {
   ASSERT_TRUE(success);
   EXPECT_EQ(std::get<int64_t>(outputs[0]), 42);
 }
+
+TEST_F(ControlFlowTest, IfStatementDoesNotExecuteFalseBranch) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/control_flow/short-circuit-if.fal"),
+      "ShortCircuitIf", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(1));
+}
+
+TEST_F(ControlFlowTest, ElseBranchDoesNotExecuteWhenConditionTrue) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/control_flow/short-circuit-if-else.fal"),
+      "ShortCircuitElse", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(1));
+}
+
+TEST_F(ControlFlowTest, ConditionalExpressionsDoNotEvaluateFalseBranches) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/control_flow/conditional-expression-evaluation.fal"),
+      "ConditionalExpressionEvaluation", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(1));
+}

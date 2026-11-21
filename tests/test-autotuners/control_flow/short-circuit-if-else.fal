@@ -1,0 +1,22 @@
+autotuner ShortCircuitElse()
+    -> (
+        int result
+    ) {
+
+    result = 0;
+
+    start -> run;
+
+    state run {
+
+        if (true) {
+            result = 1;
+        }
+        else {
+            int x = 1 / 0;
+            result = 999;
+        }
+
+        terminal;
+    }
+}

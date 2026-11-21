@@ -1,0 +1,19 @@
+autotuner ShortCircuitIf()
+    -> (
+        int result
+    ) {
+
+    result = 1;
+
+    start -> run;
+
+    state run {
+
+        if (false) {
+            int x = 1 / 0;
+            result = 999;
+        }
+
+        terminal;
+    }
+}

@@ -35,7 +35,8 @@
     State,
     Struct,
     Routine,
-    Loop
+    Loop,
+    Conditional
   };
 
   struct VariableInfo {
@@ -510,7 +511,15 @@ struct_routine_stmt[result]
         $result = std::move($vd);
         set_stmt_location($result.get(), @vd);
       }
-    | IF LPAREN expr[cond] RPAREN routine_body[then_b] elif_chain[else_b]
+    | IF LPAREN expr[cond] RPAREN LBRACE
+      {
+        push_scope(ScopeKind::Conditional);
+      }
+      routine_body[then_b] 
+      {
+        pop_scope();
+      }
+      RBRACE elif_chain[else_b]
       {
         $result = std::make_unique<IfStmt>(
             std::move($cond),
@@ -939,7 +948,16 @@ stmt[result]
         $result = std::move($vd);
         set_stmt_location($result.get(), @vd);
       }
-    | IF LPAREN expr[cond] RPAREN LBRACE stmt_list[then_b] RBRACE elif_chain[else_b]
+
+    | IF LPAREN expr[cond] RPAREN LBRACE
+      {
+        push_scope(ScopeKind::Conditional);
+      }
+      stmt_list[then_b] 
+      {
+        pop_scope();
+      }
+      RBRACE elif_chain[else_b]
       {
         $result = std::make_unique<IfStmt>(
             std::move($cond),
@@ -957,9 +975,25 @@ stmt[result]
 elif_chain[result]
     : %empty
       { $result = std::vector<std::unique_ptr<Stmt>>(); }
-    | ELSE LBRACE stmt_list[else_b] RBRACE
+    | ELSE LBRACE 
+      {
+        push_scope(ScopeKind::Conditional);
+      }
+      stmt_list[else_b] 
+      {
+        pop_scope();
+      }
+      RBRACE
       { $result = std::move($else_b); }
-    | ELIF LPAREN expr[cond] RPAREN LBRACE stmt_list[then_b] RBRACE elif_chain[rest]
+    | ELIF LPAREN expr[cond] RPAREN LBRACE 
+      {
+        push_scope(ScopeKind::Conditional);
+      }
+      stmt_list[then_b] 
+      {
+        pop_scope();
+      }
+      RBRACE elif_chain[rest]
       {
         $result = std::vector<std::unique_ptr<Stmt>>();
         $result.push_back(std::make_unique<IfStmt>(

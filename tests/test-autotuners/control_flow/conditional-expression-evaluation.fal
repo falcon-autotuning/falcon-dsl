@@ -1,0 +1,48 @@
+autotuner ConditionalExpressionEvaluation()
+    -> (
+        int result
+    ) {
+
+    result = 0;
+
+    start -> run;
+
+    state run {
+
+        int x = 0;
+
+        // !=
+        if (x != 0) {
+            int y = 1 / 0;
+        }
+
+        // ==
+        if (x == 1) {
+            int y = 1 / 0;
+        }
+
+        // <
+        if (x < 0) {
+            int y = 1 / 0;
+        }
+
+        // >
+        if (x > 0) {
+            int y = 1 / 0;
+        }
+
+        // <=
+        if (x <= -1) {
+            int y = 1 / 0;
+        }
+
+        // >=
+        if (x >= 1) {
+            int y = 1 / 0;
+        }
+
+        result = 1;
+
+        terminal;
+    }
+}
