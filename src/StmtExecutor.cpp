@@ -56,11 +56,6 @@ ControlFlow StmtExecutor::execute(const atc::Stmt &stmt) {
                              [&](const auto &x) { return exec_assign(x); })) {
     return *result;
   }
-  if (auto result = try_exec(
-          dynamic_cast<const atc::StructFieldAssignStmt *>(&stmt),
-          [&](const auto &x) { return exec_struct_field_assign(x); })) {
-    return *result;
-  }
   if (auto result = try_exec(dynamic_cast<const atc::ExprStmt *>(&stmt),
                              [&](const auto &x) { return exec_expr(x); })) {
     return *result;
@@ -224,8 +219,6 @@ ControlFlow StmtExecutor::exec_assign(const atc::AssignStmt &stmt) {
     // Single assignment
     const auto &target = stmt.targets[0];
     if (target.is_field_target()) {
-      // Should not normally reach here — parser emits StructFieldAssignStmt
-      // for standalone dot-assigns — but handle it defensively.
       const auto *var_expr =
           dynamic_cast<const atc::VarExpr *>(target.object.get());
       if (var_expr == nullptr) {
@@ -242,56 +235,15 @@ ControlFlow StmtExecutor::exec_assign(const atc::AssignStmt &stmt) {
                               "' is nullptr");
       }
       structPtr->set_field(target.field_name, value);
+
+      auto flat_it = variables_.find(target.field_name);
+      if (flat_it != variables_.end()) {
+        flat_it->second = value;
+      }
     } else {
       variables_[target.variable] = value;
     }
   }
-  return ControlFlow::none();
-}
-ControlFlow
-StmtExecutor::exec_struct_field_assign(const atc::StructFieldAssignStmt &stmt) {
-  auto val = evaluator_.evaluate(*stmt.value);
-  // The object must be a VarExpr referring to a StructInstance in variables_.
-  const auto *var_expr = dynamic_cast<const atc::VarExpr *>(stmt.object.get());
-  if (var_expr == nullptr) {
-    throw EvaluationError(
-        "Struct field assignment requires a variable as the object");
-  }
-  auto structIter = variables_.find(var_expr->name);
-  if (structIter == variables_.end()) {
-    throw EvaluationError("Undefined variable in struct field assignment: " +
-                          var_expr->name);
-  }
-  if (!std::holds_alternative<std::shared_ptr<typing::StructInstance>>(
-          structIter->second)) {
-    throw EvaluationError("Variable '" + var_expr->name +
-                          "' is not a struct instance");
-  }
-  auto &structPtr =
-      std::get<std::shared_ptr<typing::StructInstance>>(structIter->second);
-  if (!structPtr) {
-    throw EvaluationError("Struct variable '" + var_expr->name +
-                          "' is nullptr");
-  }
-  // Write into the struct instance's field map.
-  structPtr->set_field(stmt.field, val);
-
-  // If we are inside a struct routine body, struct fields are also flattened
-  // into variables_ as bare names (e.g. "total" as well as "this.total").
-  // Keep the flat entry in sync so that subsequent reads of the bare field
-  // name within the same routine body see the updated value immediately.
-  //
-  // Example: inside  routine Add(T delta) -> (T new_total):
-  //   total = total + delta;   ← StructFieldAssignStmt(this, "total", ...)
-  //                               updates receiver_instance->fields["total"]
-  //                               AND now also routine_env["total"]
-  //   new_total = total;       ← AssignStmt reads routine_env["total"]
-  //                               and gets the updated value ✓
-  auto flat_it = variables_.find(stmt.field);
-  if (flat_it != variables_.end()) {
-    flat_it->second = val;
-  }
-
   return ControlFlow::none();
 }
 

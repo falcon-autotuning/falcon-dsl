@@ -1,0 +1,19 @@
+struct Counter {
+    int value;
+}
+
+routine Double(int x) -> (int out) {
+    out = x * 2;
+}
+
+autotuner RoutineStructAssignment() -> (int out) {
+    Counter c;
+
+    start -> run;
+
+    state run {
+        c.value = Double(5);
+        out = c.value;
+        terminal;
+    }
+}

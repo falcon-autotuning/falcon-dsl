@@ -1,0 +1,23 @@
+struct Counter {
+    int value;
+
+    routine SetValue(int x) -> () {
+        value = x;
+    }
+}
+
+routine Identity(int x) -> (int out) {
+    out = x;
+}
+
+autotuner RoutineCallAsMethodArgument() -> (int out) {
+    Counter c;
+
+    start -> run;
+
+    state run {
+        c.SetValue(Identity(5));
+        out = c.value;
+        terminal;
+    }
+}

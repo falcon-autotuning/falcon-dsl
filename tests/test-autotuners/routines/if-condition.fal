@@ -1,0 +1,16 @@
+routine IsPositive(int x) -> (bool out) {
+    out = x > 0;
+}
+
+autotuner RoutineIfCondition(int n) -> (int out) {
+    start -> run;
+
+    state run {
+        if (IsPositive(n)) {
+            out = 1;
+        } else {
+            out = 0;
+        }
+        terminal;
+    }
+}

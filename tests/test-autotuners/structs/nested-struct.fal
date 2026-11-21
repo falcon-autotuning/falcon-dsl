@@ -1,0 +1,49 @@
+struct Quantity {
+    int a;
+    routine New (int a) -> (Quantity q) {
+        q.a = a;
+    }
+    routine Value  -> (int value) {
+        value = this.a;
+    }
+    routine Update (int b) -> () {
+        this.a = b;
+    }
+}
+struct Connection {
+    string name;
+    Quantity quan;
+    routine New (string name, Quantity quan) -> (Connection c) {
+        c.name = name;
+        c.quan = quan;
+    }
+    routine Name -> (string name) {
+        name = this.name;
+    }
+    routine Quantity -> (Quantity quan) {
+        quan = this.quan;
+    }
+    routine UpdateQuantity (int c) -> () {
+        this.quan.Update(c);
+    }
+}
+
+autotuner NestedStruct(int a, int b) -> (int sum, string name) {
+  sum = 0;
+  name = "";
+  
+  start -> calculate;
+  
+  state calculate {
+    Quantity q = Quantity.New(a);
+    Connection c = Connection.New("test",q);
+    c.UpdateQuantity(5);
+    sum = c.quan.Value() + b;
+    name = c.Name();
+    -> done;
+  }
+  
+  state done {
+    terminal;
+  }
+}

@@ -1,0 +1,19 @@
+struct Counter {
+    int value;
+}
+
+routine Double(int x) -> (int out) {
+    out = x * 2;
+}
+
+autotuner RoutineStructField() -> (int out) {
+    Counter c;
+
+    start -> run;
+
+    state run {
+        c.value = 7;
+        out = Double(c.value);
+        terminal;
+    }
+}

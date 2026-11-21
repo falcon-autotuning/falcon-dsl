@@ -1,0 +1,18 @@
+routine Equals(int a, int b) -> (bool out) {
+    out = a == b;
+}
+
+autotuner RoutineElifCondition(int n) -> (int out) {
+    start -> run;
+
+    state run {
+        if (Equals(n, 0)) {
+            out = 0;
+        } elif (Equals(n, 5)) {
+            out = 5;
+        } else {
+            out = -1;
+        }
+        terminal;
+    }
+}

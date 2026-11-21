@@ -160,6 +160,23 @@
     }
   }
 
+  std::unique_ptr<falcon::atc::AssignTarget>
+  expr_to_assign_target(std::unique_ptr<falcon::atc::Expr> expr)
+  {
+      if (auto* var = dynamic_cast<falcon::atc::VarExpr*>(expr.get())) {
+          return std::make_unique<falcon::atc::AssignTarget>(
+              std::move(var->name));
+      }
+
+      if (auto* member = dynamic_cast<falcon::atc::MemberExpr*>(expr.get())) {
+          return std::make_unique<falcon::atc::AssignTarget>(
+              std::move(member->object),
+              std::move(member->member));
+      }
+
+      throw std::runtime_error(
+          "Expression is not assignable");
+  }
 }
 
 // ============================================================================
@@ -204,8 +221,7 @@
 %type <std::unique_ptr<StructDecl>>    struct_decl
 %type <std::vector<VarDeclStmt>>       struct_field_list
 %type <std::vector<RoutineDecl>> struct_routine_list
-%type <std::vector<AssignTarget>>      assign_target_list
-%type <std::unique_ptr<AssignTarget>> assign_target
+%type <std::vector<std::unique_ptr<Expr>>> assignment_lhs
 %type <std::vector<std::unique_ptr<TypeDescriptor>>> type_arg_list
 %type <std::vector<std::variant<
     std::unique_ptr<StructDecl>,
@@ -463,59 +479,26 @@ struct_routine_stmt[result]
           {
               $result = std::move($f);
           }
+    | assignment_lhs[lhs] ASSIGN expr[val] SEMICOLON
+      {
+        std::vector<AssignTarget> targets;
+        for (auto& expr : $lhs) {
+            auto target =
+                expr_to_assign_target(
+                    std::move(expr));
+            targets.push_back(
+                std::move(*target));
+        }
+        $result =
+            std::make_unique<AssignStmt>(
+                std::move(targets),
+                std::move($val));
+        set_stmt_location($result.get(), @lhs);
+      }
     | var_decl_stmt[vd]
       {
         $result = std::move($vd);
         set_stmt_location($result.get(), @vd);
-      }
-    | IDENTIFIER[name] ASSIGN expr[val] SEMICOLON
-      {
-        auto info = lookup_variable($name);
-        if (!info) {
-            error(@name,
-                  "Undefined variable: " + $name);
-            YYABORT;
-        }
-        if (info->defining_scope == ScopeKind::Struct) {
-
-            $result =
-                std::make_unique<StructFieldAssignStmt>(
-                    std::make_unique<VarExpr>("this"),
-                    std::move($name),
-                    std::move($val));
-
-        } else {
-
-            std::vector<AssignTarget> targets;
-            targets.push_back(AssignTarget($name));
-
-            $result =
-                std::make_unique<AssignStmt>(
-                    std::move(targets),
-                    std::move($val));
-        }
-        if (!info->variable.writeable) {
-            error(@name,
-                  "Cannot assign to read-only parameter: " + $name);
-            YYABORT;
-        }
-        set_stmt_location($result.get(), @name);
-      }
-    | IDENTIFIER[object] DOT IDENTIFIER[field] ASSIGN expr[val] SEMICOLON
-      {
-        $result = std::make_unique<StructFieldAssignStmt>(
-            std::make_unique<VarExpr>(std::move($object)),
-            std::move($field),
-            std::move($val));
-        set_stmt_location($result.get(), @object);
-      }
-    | THIS DOT IDENTIFIER[field] ASSIGN expr[val] SEMICOLON
-      {
-        $result = std::make_unique<StructFieldAssignStmt>(
-            std::make_unique<VarExpr>("this"),
-            std::move($field),
-            std::move($val));
-        set_stmt_location($result.get(), @THIS);
       }
     | IF LPAREN expr[cond] RPAREN routine_body[then_b] elif_chain[else_b]
       {
@@ -860,36 +843,21 @@ stmt_list[result]
       }
     ;
 
+assignment_lhs[result]
+    : expr[first]
+      {
+          $result = std::vector<std::unique_ptr<Expr>>();
+          $result.push_back(std::move($first));
+      }
+    | assignment_lhs[existing] COMMA expr[next]
+      {
+          $result = std::move($existing);
+          $result.push_back(std::move($next));
+      }
+    ;
+
 stmt[result]
-    : var_decl_stmt[vd]
-      {
-        $result = std::move($vd);
-        set_stmt_location($result.get(), @vd);
-      }
-    | assign_target_list[targets] ASSIGN expr[val] SEMICOLON
-      {
-        $result = std::make_unique<AssignStmt>(
-            std::move($targets),
-            std::move($val));
-        set_stmt_location($result.get(), @targets);
-      }
-    | IDENTIFIER[object] DOT IDENTIFIER[field] ASSIGN expr[val] SEMICOLON
-      {
-        $result = std::make_unique<StructFieldAssignStmt>(
-            std::make_unique<VarExpr>(std::move($object)),
-            std::move($field),
-            std::move($val));
-        set_stmt_location($result.get(), @object);
-      }
-    | THIS DOT IDENTIFIER[field] ASSIGN expr[val] SEMICOLON
-      {
-        $result = std::make_unique<StructFieldAssignStmt>(
-            std::make_unique<VarExpr>("this"),
-            std::move($field),
-            std::move($val));
-        set_stmt_location($result.get(), @THIS);
-      }
-    | ARROW IDENTIFIER[target] SEMICOLON
+    : ARROW IDENTIFIER[target] SEMICOLON
       {
         $result = std::make_unique<TransitionStmt>(
             std::move($target),
@@ -907,6 +875,27 @@ stmt[result]
       {
         $result = std::make_unique<TerminalStmt>();
         set_stmt_location($result.get(), @TERMINAL);
+      }
+    | assignment_lhs[lhs] ASSIGN expr[val] SEMICOLON
+      {
+        std::vector<AssignTarget> targets;
+        for (auto& expr : $lhs) {
+            auto target =
+                expr_to_assign_target(
+                    std::move(expr));
+            targets.push_back(
+                std::move(*target));
+        }
+        $result =
+            std::make_unique<AssignStmt>(
+                std::move(targets),
+                std::move($val));
+        set_stmt_location($result.get(), @lhs);
+      }
+    | var_decl_stmt[vd]
+      {
+        $result = std::move($vd);
+        set_stmt_location($result.get(), @vd);
       }
     | IF LPAREN expr[cond] RPAREN LBRACE stmt_list[then_b] RBRACE elif_chain[else_b]
       {
@@ -935,39 +924,6 @@ elif_chain[result]
             std::move($cond),
             std::move($then_b),
             std::move($rest)));
-      }
-    ;
-
-assign_target_list[result]
-    : assign_target[first]
-      {
-        $result = std::vector<AssignTarget>();
-        $result.push_back(std::move(*$first));
-      }
-    | assign_target_list[existing] COMMA assign_target[next]
-      {
-        $result = std::move($existing);
-        $result.push_back(std::move(*$next));
-      }
-    ;
-
-assign_target[result]
-    : IDENTIFIER[name]
-      {
-        auto info = lookup_variable($name);
-
-        if (!info) {
-            error(@name,
-                  "Undefined variable: " + $name);
-            YYABORT;
-        }
-
-        if (!info->variable.writeable) {
-            error(@name,
-                  "Cannot assign to read-only parameter: " + $name);
-            YYABORT;
-        }
-        $result = std::make_unique<AssignTarget>($name);
       }
     ;
 

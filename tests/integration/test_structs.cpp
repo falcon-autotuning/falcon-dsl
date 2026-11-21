@@ -168,3 +168,19 @@ TEST_F(StructsTest, StructRoutineForLoop) {
 
   EXPECT_EQ(std::get<int64_t>(outputs[0]), static_cast<int64_t>(10));
 }
+
+// Explicitly tests the recursion of "." inside of routines and states for
+// methods
+TEST_F(StructsTest, NestedStruct) {
+  ParameterMap params;
+  params["a"] = static_cast<int64_t>(20);
+  params["b"] = static_cast<int64_t>(5);
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/structs/nested-struct.fal"),
+      "NestedStruct", params, true};
+  auto [success, outputs] = compile_and_run(cenv);
+  ASSERT_TRUE(success);
+  ASSERT_FALSE(outputs.empty());
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 10);
+  EXPECT_EQ(std::get<std::string>(outputs[1]), "test");
+}

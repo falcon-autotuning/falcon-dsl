@@ -811,35 +811,6 @@ public:
 };
 
 /**
- * @brief Standalone struct field assignment: q.field = expr;
- *
- * This is the dedicated single-target form. When only one struct field is
- * being assigned (not as part of a tuple), the parser emits this instead of
- * AssignStmt for clarity.
- *
- * Used:
- *   - Inside struct routines with implicit self:  a_ = expr;   -> object =
- * VarExpr("self")
- *   - Outside with explicit object:               q.a_ = expr;
- */
-class StructFieldAssignStmt : public Stmt {
-public:
-  std::unique_ptr<Expr>
-      object; // The struct variable (or VarExpr("self") inside a routine)
-  std::string field;           // Field name
-  std::unique_ptr<Expr> value; // RHS expression
-
-  StructFieldAssignStmt(std::unique_ptr<Expr> obj, std::string f,
-                        std::unique_ptr<Expr> val)
-      : object(std::move(obj)), field(std::move(f)), value(std::move(val)) {}
-
-  std::unique_ptr<Stmt> clone() const override {
-    return std::make_unique<StructFieldAssignStmt>(object->clone(), field,
-                                                   value->clone());
-  }
-};
-
-/**
  * @brief Expression statement (for side effects).
  *
  * Examples:

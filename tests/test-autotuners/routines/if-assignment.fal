@@ -1,0 +1,16 @@
+routine Double(int x) -> (int out) {
+    out = x * 2;
+}
+
+autotuner RoutineIfAssignment(int n) -> (int out) {
+    start -> run;
+
+    state run {
+        if (n > 0) {
+            out = Double(n);
+        } else {
+            out = -1;
+        }
+        terminal;
+    }
+}
