@@ -207,3 +207,67 @@ TEST_F(ForeignFunctionTest, RuntimeLessThanInferred) {
 
   EXPECT_FALSE(std::get<bool>(outputs2[0]));
 }
+
+TEST_F(ForeignFunctionTest, FalconStructFfiEqual) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/ffi-equal-native-struct.fal"),
+      "FalconStructEqualTest", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}
+
+TEST_F(ForeignFunctionTest, FalconStructFfiNotEqual) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/ffi-notequal-native-struct.fal"),
+      "FalconStructNotEqualTest", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}
+
+TEST_F(ForeignFunctionTest, InferNotEqualFromEqualNativeStruct) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/infer-notequal-from-equal.fal"),
+      "InferNotEqualFromEqualTest", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}
+
+TEST_F(ForeignFunctionTest, InferEqualFromNotEqualNativeStruct) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/infer-equal-from-notequal.fal"),
+      "InferEqualFromNotEqualTest", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}

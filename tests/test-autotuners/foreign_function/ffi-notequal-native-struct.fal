@@ -1,0 +1,36 @@
+ffimport "FalconStructNotEqualW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
+
+struct Point {
+    int x;
+    int y;
+
+    routine NotEqual(Point other) -> (bool neq)
+}
+
+autotuner FalconStructNotEqualTest()
+    -> (bool neq) {
+
+    neq = false;
+
+    start -> run;
+
+    state run {
+
+        Point a;
+        Point b;
+
+        a.x = 1;
+        a.y = 2;
+
+        b.x = 4;
+        b.y = 5;
+
+        neq = (a != b);
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}
