@@ -149,3 +149,61 @@ TEST_F(ForeignFunctionTest, RuntimeOrderingOverride) {
   EXPECT_TRUE(std::get<bool>(outputs[0]));
   EXPECT_TRUE(std::get<bool>(outputs[1]));
 }
+
+TEST_F(ForeignFunctionTest, RuntimeGreaterThanInferred) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/runtime-greater-than-inferred.fal"),
+      "RuntimeGreaterThanInferredTest", params, true};
+
+  params["a"] = static_cast<int64_t>(5);
+  params["b"] = static_cast<int64_t>(1);
+
+  auto [success1, outputs1] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success1);
+  ASSERT_EQ(outputs1.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs1[0]));
+
+  params["a"] = static_cast<int64_t>(1);
+  params["b"] = static_cast<int64_t>(5);
+
+  auto [success2, outputs2] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success2);
+  ASSERT_EQ(outputs2.size(), 1u);
+
+  EXPECT_FALSE(std::get<bool>(outputs2[0]));
+}
+
+TEST_F(ForeignFunctionTest, RuntimeLessThanInferred) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/runtime-less-than-inferred.fal"),
+      "RuntimeLessThanInferredTest", params, true};
+
+  params["a"] = static_cast<int64_t>(1);
+  params["b"] = static_cast<int64_t>(5);
+
+  auto [success1, outputs1] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success1);
+  ASSERT_EQ(outputs1.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs1[0]));
+
+  params["a"] = static_cast<int64_t>(5);
+  params["b"] = static_cast<int64_t>(1);
+
+  auto [success2, outputs2] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success2);
+  ASSERT_EQ(outputs2.size(), 1u);
+
+  EXPECT_FALSE(std::get<bool>(outputs2[0]));
+}

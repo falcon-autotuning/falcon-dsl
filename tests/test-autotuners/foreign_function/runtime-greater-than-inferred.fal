@@ -1,0 +1,33 @@
+ffimport "RuntimeGreaterThanInferredW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
+
+struct LessEqualValue {
+    routine New(int value) -> (LessEqualValue out)
+    routine Equal(LessEqualValue other) -> (bool equal)
+    routine LessThan(LessEqualValue other) -> (bool less)
+}
+
+autotuner RuntimeGreaterThanInferredTest(
+    int a,
+    int b
+) -> (
+    bool gt
+) {
+
+    gt = false;
+
+    start -> run;
+
+    state run {
+
+        LessEqualValue lhs = LessEqualValue.New(a);
+        LessEqualValue rhs = LessEqualValue.New(b);
+
+        gt = (lhs > rhs);
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}
