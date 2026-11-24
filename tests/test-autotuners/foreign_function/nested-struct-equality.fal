@@ -1,0 +1,31 @@
+ffimport "BoxesCopyW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
+struct ABox {
+    routine New(int a) -> (ABox box)
+}
+struct BBox {
+    routine New(int b, ABox a) -> (BBox box)
+    routine Equal(BBox other) -> (bool equal)
+}
+
+autotuner NestedStructFFIEquality(int _a, int _b)
+    -> (bool equal) {
+
+    equal = false;
+
+    start -> run;
+
+    state run {
+
+        ABox a = ABox.New(_a);
+        BBox b = BBox.New(_b, a);
+
+        BBox c = BBox.New(_b+2, a);
+        equal = (b != c);
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}

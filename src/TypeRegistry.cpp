@@ -556,6 +556,7 @@ TypeRegistry::runtime_deep_copy_impl(const typing::RuntimeValue &value,
           if (const typing::TypeMethod *method =
                   lookup_ffi_method(v->type_name, "DeepCopy")) {
             typing::ParameterMap params;
+            params["this"] = v;
             typing::FunctionResult result = (*method)(v, params);
 
             if (result.size() != 1) {

@@ -1,0 +1,36 @@
+ffimport "BoxCopyErrorW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
+struct ABox {
+    routine New(int a) -> (ABox box)
+    routine NotEqual(ABox other) -> (bool equal)
+}
+struct BBox {
+    routine New(int b, ABox a) -> (BBox box)
+    routine UpdateB (int b) -> ()
+    routine UpdateA (ABox a) -> ()
+    routine DeepCopy() -> (BBox box)
+    routine Equal(BBox other) -> (bool equal)
+}
+
+autotuner NestedDeepCopyError(int _a, int _b)
+    -> (bool equal) {
+
+    equal = false;
+
+    start -> run;
+
+    state run {
+
+        ABox a = ABox.New(_a);
+        BBox b = BBox.New(_b, a);
+        BBox c = b.DeepCopy();
+        b.UpdateB(_b +2);
+        b.UpdateA(ABox.New(_a+1));
+        equal = (b != c);
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}

@@ -388,3 +388,130 @@ TEST_F(ForeignFunctionTest, PureFalconStructDeepCopyFallback) {
 
   EXPECT_EQ(std::get<int64_t>(outputs[1]), 11);
 }
+
+TEST_F(ForeignFunctionTest, NestedStructFFIEquality) {
+  ParameterMap params;
+
+  params["_a"] = static_cast<int64_t>(10);
+  params["_b"] = static_cast<int64_t>(20);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/nested-struct-equality.fal"),
+      "NestedStructFFIEquality", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}
+
+TEST_F(ForeignFunctionTest, NestedStructNoEqualityError) {
+  ParameterMap params;
+
+  params["_a"] = static_cast<int64_t>(10);
+  params["_b"] = static_cast<int64_t>(20);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/foreign_function/"
+                            "nested-struct-no-equality-error.fal"),
+      "NestedStructFFIError", params, false};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_FALSE(success);
+}
+
+TEST_F(ForeignFunctionTest, NestedStructNonNativeFFIEquality) {
+  ParameterMap params;
+
+  params["_a"] = static_cast<int64_t>(10);
+  params["_b"] = static_cast<int64_t>(20);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/foreign_function/"
+                            "nested-struct-non-native-equality.fal"),
+      "NestedStructNonNativeFFIEquality", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}
+
+TEST_F(ForeignFunctionTest, NestedStructSplitEquality) {
+  ParameterMap params;
+
+  params["_a"] = static_cast<int64_t>(10);
+  params["_b"] = static_cast<int64_t>(20);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/foreign_function/"
+                            "nested-struct-split-boxes.fal"),
+      "NestedSplitFFIEquality", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}
+
+TEST_F(ForeignFunctionTest, NestedDeepCopy) {
+  ParameterMap params;
+
+  params["_a"] = static_cast<int64_t>(10);
+  params["_b"] = static_cast<int64_t>(20);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/nested-struct-deepcopy.fal"),
+      "NestedDeepCopy", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}
+
+TEST_F(ForeignFunctionTest, NestedDeepCopyMissingInnerCopy) {
+  ParameterMap params;
+
+  params["_a"] = static_cast<int64_t>(10);
+  params["_b"] = static_cast<int64_t>(20);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/nested-struct-deepcopy-error.fal"),
+      "NestedDeepCopyError", params, false};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_FALSE(success);
+}
+
+TEST_F(ForeignFunctionTest, NestedDeepCopySplitLibraries) {
+  ParameterMap params;
+
+  params["_a"] = static_cast<int64_t>(10);
+  params["_b"] = static_cast<int64_t>(20);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/nested-struct-deepcopy-split.fal"),
+      "NestedDeepCopySplit", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}
