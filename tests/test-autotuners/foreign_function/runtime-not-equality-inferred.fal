@@ -1,0 +1,26 @@
+ffimport "InferredNotEqualityW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
+
+struct InferredValue {
+    routine New(int value) -> (InferredValue out)
+    routine Equal(InferredValue other) -> (bool neq)
+}
+
+autotuner RuntimeNotEqualInferredTest(int _a, int _b) -> (bool neq) {
+
+    neq = false;
+
+    start -> run;
+
+    state run {
+        InferredValue a = InferredValue.New(_a);
+        InferredValue b = InferredValue.New(_b);
+
+        neq = (a != b);
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}

@@ -1,0 +1,26 @@
+ffimport "RuntimeEqualityW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
+
+struct TestValue {
+    routine New(int value) -> (TestValue out)
+    routine NotEqual(TestValue other) -> (bool neq)
+}
+
+autotuner RuntimeNotEqualTest(int _a, int _b) -> (bool neq) {
+
+    neq = false;
+
+    start -> run;
+
+    state run {
+        TestValue a = TestValue.New(_a);
+        TestValue b = TestValue.New(_b);
+
+        neq = (a != b);
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}

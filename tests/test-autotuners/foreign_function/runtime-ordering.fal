@@ -1,0 +1,31 @@
+ffimport "RuntimeEqualityW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
+
+struct TestValue {
+    routine New(int value) -> (TestValue out)
+    routine LessThan(TestValue other) -> (bool less)
+    routine GreaterThan(TestValue other) -> (bool greater)
+}
+
+autotuner RuntimeOrderingTest()
+    -> (bool lt, bool gt) {
+
+    lt = false;
+    gt = false;
+
+    start -> run;
+
+    state run {
+
+        TestValue a = TestValue.New(1);
+        TestValue b = TestValue.New(10);
+
+        lt = (a < b);
+        gt = (b > a);
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}

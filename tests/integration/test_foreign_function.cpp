@@ -56,3 +56,96 @@ TEST_F(ForeignFunctionTest, ConnectionBinding) {
   EXPECT_EQ(std::get<std::string>(outputs[0]), "PlungerGate");
   EXPECT_TRUE(std::get<bool>(outputs[1]));
 }
+
+TEST_F(ForeignFunctionTest, RuntimeEqualityOverride) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/runtime-equality.fal"),
+      "RuntimeEqualityTest", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}
+
+TEST_F(ForeignFunctionTest, RuntimeNotEqualityOverride) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/runtime-notequal.fal"),
+      "RuntimeNotEqualTest", params, true};
+  {
+    params.emplace("_a", static_cast<int64_t>(1));
+    params.emplace("_b", static_cast<int64_t>(2));
+    auto [success, outputs] = compile_and_run(cenv);
+
+    ASSERT_TRUE(success);
+    ASSERT_EQ(outputs.size(), 1u);
+
+    EXPECT_TRUE(std::get<bool>(outputs[0]));
+  }
+  params.clear();
+  {
+    params.emplace("_a", static_cast<int64_t>(1));
+    params.emplace("_b", static_cast<int64_t>(1));
+    auto [success, outputs] = compile_and_run(cenv);
+
+    ASSERT_TRUE(success);
+    ASSERT_EQ(outputs.size(), 1u);
+
+    EXPECT_FALSE(std::get<bool>(outputs[0]));
+  }
+}
+
+TEST_F(ForeignFunctionTest, RuntimeNotEqualityInferred) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/runtime-not-equality-inferred.fal"),
+      "RuntimeNotEqualInferredTest", params, true};
+  {
+    params.emplace("_a", static_cast<int64_t>(1));
+    params.emplace("_b", static_cast<int64_t>(2));
+    auto [success, outputs] = compile_and_run(cenv);
+
+    ASSERT_TRUE(success);
+    ASSERT_EQ(outputs.size(), 1u);
+
+    EXPECT_TRUE(std::get<bool>(outputs[0]));
+  }
+  params.clear();
+  {
+    params.emplace("_a", static_cast<int64_t>(1));
+    params.emplace("_b", static_cast<int64_t>(1));
+    auto [success, outputs] = compile_and_run(cenv);
+
+    ASSERT_TRUE(success);
+    ASSERT_EQ(outputs.size(), 1u);
+
+    EXPECT_FALSE(std::get<bool>(outputs[0]));
+  }
+}
+
+TEST_F(ForeignFunctionTest, RuntimeOrderingOverride) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/runtime-ordering.fal"),
+      "RuntimeOrderingTest", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 2u);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+  EXPECT_TRUE(std::get<bool>(outputs[1]));
+}

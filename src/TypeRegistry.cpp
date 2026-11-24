@@ -124,7 +124,7 @@ std::optional<bool> TypeRegistry::invoke_comparison(
 
   if (auto result = invoke_comparison_override(
           lhs, rhs, std::string(inverse_method_name(op)))) {
-    return !result;
+    return !(*result);
   }
 
   return std::nullopt;
