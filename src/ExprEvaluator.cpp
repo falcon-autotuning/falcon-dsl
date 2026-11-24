@@ -587,6 +587,13 @@ ExprEvaluator::eval_method_call(const atc::MethodCallExpr &expr) {
       const atc::RoutineDecl *routine =
           struct_decl->find_routine(expr.method_name);
       if (routine == nullptr) {
+        if (expr.method_name == "DeepCopy") {
+          if (!expr.args.empty()) {
+            throw EvaluationError("DeepCopy expects no arguments");
+          }
+          auto object = evaluate(*expr.object);
+          return types_->runtime_deep_copy(object);
+        }
         throw EvaluationError("Unknown struct routine '" + expr.method_name +
                               "' on type '" + struct_decl->name + "'");
       }
@@ -680,8 +687,15 @@ ExprEvaluator::eval_method_call(const atc::MethodCallExpr &expr) {
     const atc::RoutineDecl *routine =
         struct_decl->find_routine(expr.method_name);
     if (routine == nullptr) {
+      if (expr.method_name == "DeepCopy") {
+        if (!expr.args.empty()) {
+          throw EvaluationError("DeepCopy expects no arguments");
+        }
+        auto object = evaluate(*expr.object);
+        return types_->runtime_deep_copy(object);
+      }
       throw EvaluationError("Unknown struct routine '" + expr.method_name +
-                            "' on type '" + instancePtr->type_name + "'");
+                            "' on type '" + struct_decl->name + "'");
     }
 
     std::vector<typing::RuntimeValue> call_args;
@@ -851,13 +865,6 @@ typing::RuntimeValue ExprEvaluator::eval_call(const atc::CallExpr &expr) {
     func = functions_->lookup(resolved_name);
   }
   if (func == nullptr) {
-    if (expr.name == "DeepCopy") {
-      if (expr.arguments.size() != 1) {
-        throw EvaluationError("DeepCopy expects exactly one argument");
-      }
-      auto value = evaluate(*expr.arguments.front().value);
-      return types_->runtime_deep_copy(value);
-    }
     throw EvaluationError("Unknown function: " + expr.name);
   }
 

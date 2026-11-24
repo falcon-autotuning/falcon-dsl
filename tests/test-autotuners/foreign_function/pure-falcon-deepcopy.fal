@@ -19,7 +19,7 @@ autotuner PureFalconDeepCopyTest()
         p.y = 22;
 
         Point copy =
-            DeepCopy(p);
+            p.DeepCopy();
 
         p.x = 88;
 
