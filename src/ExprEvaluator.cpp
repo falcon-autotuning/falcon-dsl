@@ -1,13 +1,10 @@
 #include "falcon-dsl/ExprEvaluator.hpp"
 #include "falcon-dsl/StmtExecutor.hpp"
 #include "falcon-dsl/log.hpp"
-#include <cmath>
 #include <fmt/format.h>
 #include <optional>
-#include <sstream>
 
 namespace falcon::dsl {
-using fmt::format;
 // ---------------------------------------------------------------------------
 // Helper: substitute generic type params in a TypeDescriptor.
 // subst maps param name (e.g. "T") → concrete TypeDescriptor.
@@ -18,8 +15,9 @@ substitute_type(const atc::TypeDescriptor &td,
   if (td.is_struct()) {
     // If the struct_name is a known generic param, replace it.
     auto it = subst.find(td.struct_name);
-    if (it != subst.end())
+    if (it != subst.end()) {
       return it->second;
+    }
     // Otherwise keep as-is (plain struct or already-monomorphized name).
     return td;
   }
@@ -48,15 +46,16 @@ substitute_type(const atc::TypeDescriptor &td,
 static const atc::StructDecl *
 monomorphize_struct(const atc::StructDecl &base_decl,
                     const std::vector<atc::TypeDescriptor> &type_args,
-                    std::shared_ptr<falcon::dsl::TypeRegistry> types) {
+                    const std::shared_ptr<falcon::dsl::TypeRegistry> &types) {
   // Build monomorphized name, e.g. "Box<int>"
   std::string mono_name = base_decl.name + "<";
   for (size_t i = 0; i < type_args.size(); ++i) {
-    if (i > 0)
-      mono_name += ",";
-    mono_name += type_args[i].to_string();
+    if (i > 0) {
+      mono_name += ',';
+    }
+    mono_name += type_args.at(i).to_string();
   }
-  mono_name += ">";
+  mono_name += '>';
 
   // Cache hit?
   if (types->has_monomorphized(mono_name)) {
@@ -72,7 +71,7 @@ monomorphize_struct(const atc::StructDecl &base_decl,
   }
   std::map<std::string, atc::TypeDescriptor> subst;
   for (size_t i = 0; i < base_decl.generic_params.size(); ++i) {
-    subst.emplace(base_decl.generic_params[i], type_args[i]);
+    subst.emplace(base_decl.generic_params.at(i), type_args.at(i));
   }
 
   // Clone fields with substituted types (no initializer cloning needed here;
@@ -95,7 +94,8 @@ monomorphize_struct(const atc::StructDecl &base_decl,
   // (Bodies reference field names, not types, so they work as-is.)
   std::vector<atc::RoutineDecl> new_routines;
   for (const auto &r : base_decl.routines) {
-    std::vector<std::unique_ptr<atc::ParamDecl>> new_ins, new_outs;
+    std::vector<std::unique_ptr<atc::ParamDecl>> new_ins;
+    std::vector<std::unique_ptr<atc::ParamDecl>> new_outs;
     for (const auto &p : r.input_params) {
       auto new_type = substitute_type(p->type, subst);
       new_ins.push_back(
@@ -114,7 +114,7 @@ monomorphize_struct(const atc::StructDecl &base_decl,
         // substitute_type only replaces exact param-name keys (e.g. "T"),
         // so "Accumulator<T>" stays untouched. We detect this by checking
         // whether the struct_name starts with the base name followed by '<'.
-        else if (new_type.struct_name.rfind(base_decl.name + "<", 0) == 0) {
+        else if (new_type.struct_name.starts_with(base_decl.name + "<")) {
           // Rebuild the full monomorphized name by substituting param names
           // inside the angle-bracket portion.
           // e.g. "Accumulator<T>" with subst {T→int} → "Accumulator<int>"
@@ -132,25 +132,28 @@ monomorphize_struct(const atc::StructDecl &base_decl,
               if (c == ',') {
                 tokens.push_back(tok);
                 tok.clear();
-              } else
+              } else {
                 tok += c;
+              }
             }
             tokens.push_back(tok);
           }
           for (size_t ti = 0; ti < tokens.size(); ++ti) {
-            if (ti > 0)
-              rebuilt += ",";
+            if (ti > 0) {
+              rebuilt += ',';
+            }
             // Trim whitespace.
-            auto &t = tokens[ti];
+            auto &t = tokens.at(ti);
             t.erase(0, t.find_first_not_of(' '));
             t.erase(t.find_last_not_of(' ') + 1);
             auto sit = subst.find(t);
-            if (sit != subst.end())
+            if (sit != subst.end()) {
               rebuilt += sit->second.to_string();
-            else
+            } else {
               rebuilt += t;
+            }
           }
-          rebuilt += ">";
+          rebuilt += '>';
           new_type.struct_name = rebuilt;
         }
       }
@@ -160,10 +163,12 @@ monomorphize_struct(const atc::StructDecl &base_decl,
     }
     // Clone body stmts unchanged (field names stay the same)
     std::vector<std::unique_ptr<atc::Stmt>> new_body;
-    for (const auto &s : r.body)
+    new_body.reserve(r.body.size());
+    for (const auto &s : r.body) {
       new_body.push_back(s->clone());
-    new_routines.push_back(atc::RoutineDecl(
-        r.name, std::move(new_ins), std::move(new_outs), std::move(new_body)));
+    }
+    new_routines.emplace_back(r.name, std::move(new_ins), std::move(new_outs),
+                              std::move(new_body));
   }
 
   auto mono = std::make_unique<atc::StructDecl>(
@@ -175,18 +180,21 @@ monomorphize_struct(const atc::StructDecl &base_decl,
   types->register_monomorphized_struct(mono_name, std::move(mono));
   return raw;
 }
+namespace {
 // ---------------------------------------------------------------------------
 // Helper: strip the "Module::" prefix from a qualified name.
 //   "Adder::adder"       → "adder"
 //   "Quantity::Quantity"  → "Quantity"
 //   "plain"              → "plain"
 // ---------------------------------------------------------------------------
-static std::string strip_module_prefix(const std::string &name) {
+std::string strip_module_prefix(const std::string &name) {
   auto pos = name.find("::");
-  if (pos == std::string::npos)
+  if (pos == std::string::npos) {
     return name;
+  }
   return name.substr(pos + 2);
 }
+} // namespace
 
 ExprEvaluator::ExprEvaluator(typing::ParameterMap &variables,
                              std::shared_ptr<FunctionRegistry> functions,
@@ -295,7 +303,6 @@ typing::RuntimeValue ExprEvaluator::eval_member(const atc::MemberExpr &expr) {
     }
     return instancePtr->get_field(expr.member);
   }
-  // TODO: falcon-core type field access (config.plunger_gates, etc.)
   throw EvaluationError("Member access not yet implemented for type '" +
                         get_runtime_type_name(object) + "': " + expr.member);
 }
@@ -352,7 +359,7 @@ typing::FunctionResult ExprEvaluator::exec_struct_routine(
       // Pack input arguments by name from the routine signature
       for (size_t i = 0;
            i < routine.input_params.size() && i < call_args.size(); ++i) {
-        ffi_params[routine.input_params[i]->name] = call_args[i];
+        ffi_params[routine.input_params.at(i)->name] = call_args.at(i);
       }
 
       typing::FunctionResult result =
@@ -361,7 +368,7 @@ typing::FunctionResult ExprEvaluator::exec_struct_routine(
       // Use runtime_value_to_string for safe serialization of all variant types
       for (size_t i = 0; i < result.size(); ++i) {
         log::debug("FFI dispatch result[" + std::to_string(i) +
-                   "]: " + runtime_value_to_string(result[i]));
+                   "]: " + runtime_value_to_string(result.at(i)));
       }
       return result;
     }
@@ -375,10 +382,12 @@ typing::FunctionResult ExprEvaluator::exec_struct_routine(
   // If body is empty but instance is NOT native, this is the silent failure
   // mode — the constructor returned nullptr or a plain StructInstance.
   if (routine.body.empty()) {
-    log::debug("WARN: routine body empty but instance is not native: " +
-               struct_decl.name + "." + routine.name + " is_native=" +
-               std::to_string(receiver_instance ? receiver_instance->is_native()
-                                                : -1));
+    log::debug(
+        "WARN: routine body empty but instance is not native: " +
+        struct_decl.name + "." + routine.name + " is_native=" +
+        std::to_string(receiver_instance
+                           ? static_cast<int>(receiver_instance->is_native())
+                           : -1));
   }
 
   // ---- Build the sub-environment ----------------------------------------
@@ -402,7 +411,7 @@ typing::FunctionResult ExprEvaluator::exec_struct_routine(
       typing::RuntimeValue def;
       switch (field.type.base_type) {
       case atc::ParamType::Int:
-        def = int64_t(0);
+        def = static_cast<int64_t>(0);
         break;
       case atc::ParamType::Float:
         def = 0.0;
@@ -424,15 +433,15 @@ typing::FunctionResult ExprEvaluator::exec_struct_routine(
   // ---- Bind input parameters --------------------------------------------
   for (size_t i = 0; i < routine.input_params.size(); ++i) {
     if (i < call_args.size()) {
-      routine_env[routine.input_params[i]->name] = call_args[i];
-    } else if (routine.input_params[i]->default_value.has_value()) {
+      routine_env[routine.input_params.at(i)->name] = call_args.at(i);
+    } else if (routine.input_params.at(i)->default_value.has_value()) {
       ExprEvaluator sub_eval(routine_env, functions_, types_);
-      routine_env[routine.input_params[i]->name] =
-          sub_eval.evaluate(*routine.input_params[i]->default_value.value());
+      routine_env[routine.input_params.at(i)->name] =
+          sub_eval.evaluate(*routine.input_params.at(i)->default_value.value());
     } else {
       throw EvaluationError("Missing argument for struct routine '" +
                             routine.name +
-                            "' parameter: " + routine.input_params[i]->name);
+                            "' parameter: " + routine.input_params.at(i)->name);
     }
   }
 
@@ -443,7 +452,7 @@ typing::FunctionResult ExprEvaluator::exec_struct_routine(
           std::make_shared<typing::StructInstance>(out->type.struct_name);
       const atc::StructDecl *out_decl =
           types_->lookup_struct(out->type.struct_name);
-      if (out_decl) {
+      if (out_decl != nullptr) {
         ExprEvaluator sub_eval(routine_env, functions_, types_);
         for (const auto &field : out_decl->fields) {
           typing::RuntimeValue fval;
@@ -452,7 +461,7 @@ typing::FunctionResult ExprEvaluator::exec_struct_routine(
           } else {
             switch (field.type.base_type) {
             case atc::ParamType::Int:
-              fval = int64_t(0);
+              fval = static_cast<int64_t>(0);
               break;
             case atc::ParamType::Float:
               fval = 0.0;
@@ -546,8 +555,9 @@ ExprEvaluator::eval_method_call(const atc::MethodCallExpr &expr) {
       // inferred_type.struct_name is e.g. "Box<int>" — extract base name.
       const std::string &mono = expr.inferred_type->struct_name;
       auto angle = mono.find('<');
-      if (angle != std::string::npos)
+      if (angle != std::string::npos) {
         lookup_name = mono.substr(0, angle);
+      }
       injected_type_args = expr.inferred_type->type_args;
     }
 
@@ -556,10 +566,8 @@ ExprEvaluator::eval_method_call(const atc::MethodCallExpr &expr) {
       struct_decl = types_->lookup_struct(strip_module_prefix(lookup_name));
     }
 
-    if (struct_decl != nullptr &&
-        variables_.find(type_var->name) == variables_.end() &&
-        variables_.find(strip_module_prefix(type_var->name)) ==
-            variables_.end()) {
+    if (struct_decl != nullptr && !variables_.contains(type_var->name) &&
+        !variables_.contains(strip_module_prefix(type_var->name))) {
       // It IS a struct type name used as a static receiver.
 
       // If this is a generic struct and we have injected type args,
@@ -578,7 +586,7 @@ ExprEvaluator::eval_method_call(const atc::MethodCallExpr &expr) {
 
       const atc::RoutineDecl *routine =
           struct_decl->find_routine(expr.method_name);
-      if (!routine) {
+      if (routine == nullptr) {
         throw EvaluationError("Unknown struct routine '" + expr.method_name +
                               "' on type '" + struct_decl->name + "'");
       }
@@ -595,7 +603,7 @@ ExprEvaluator::eval_method_call(const atc::MethodCallExpr &expr) {
         } else {
           switch (field.type.base_type) {
           case atc::ParamType::Int:
-            fval = int64_t(0);
+            fval = static_cast<int64_t>(0);
             break;
           case atc::ParamType::Float:
             fval = 0.0;
@@ -635,16 +643,16 @@ ExprEvaluator::eval_method_call(const atc::MethodCallExpr &expr) {
                  std::to_string(outputs.size()));
       if (!outputs.empty()) {
         log::debug("Constructor output[0] type: " +
-                   get_runtime_type_name(outputs[0]));
+                   get_runtime_type_name(outputs.front()));
         log::debug("Constructor output[0] value: " +
-                   runtime_value_to_string(outputs[0]));
+                   runtime_value_to_string(outputs.front()));
       }
 
       if (outputs.empty()) {
         return nullptr;
       }
       if (outputs.size() == 1) {
-        return outputs[0];
+        return outputs.front();
       }
       return std::make_shared<typing::TupleValue>(outputs);
     }
@@ -665,13 +673,13 @@ ExprEvaluator::eval_method_call(const atc::MethodCallExpr &expr) {
 
     const atc::StructDecl *struct_decl =
         types_->lookup_struct(instancePtr->type_name);
-    if (!struct_decl) {
+    if (struct_decl == nullptr) {
       throw EvaluationError("No struct declaration found for type: " +
                             instancePtr->type_name);
     }
     const atc::RoutineDecl *routine =
         struct_decl->find_routine(expr.method_name);
-    if (!routine) {
+    if (routine == nullptr) {
       throw EvaluationError("Unknown struct routine '" + expr.method_name +
                             "' on type '" + instancePtr->type_name + "'");
     }
@@ -689,7 +697,7 @@ ExprEvaluator::eval_method_call(const atc::MethodCallExpr &expr) {
       return nullptr;
     }
     if (outputs.size() == 1) {
-      return outputs[0];
+      return outputs.front();
     }
     return std::make_shared<typing::TupleValue>(outputs);
   }
@@ -705,7 +713,7 @@ ExprEvaluator::eval_method_call(const atc::MethodCallExpr &expr) {
 
   // Legacy ArrayValue method dispatch (falconCore internal use only).
   // New code should use Array<T> StructInstance methods instead.
-  auto *method = types_->lookup_method(type_name, expr.method_name);
+  const auto *method = types_->lookup_method(type_name, expr.method_name);
   if (method == nullptr) {
     throw EvaluationError("Unknown method '" + expr.method_name +
                           "' for type '" + type_name + "'");
@@ -721,7 +729,7 @@ ExprEvaluator::eval_method_call(const atc::MethodCallExpr &expr) {
   // Map positional arguments to parameter names (position-based for legacy).
   typing::ParameterMap params;
   for (size_t i = 0; i < arg_values.size(); ++i) {
-    params["arg" + std::to_string(i)] = arg_values[i];
+    params["arg" + std::to_string(i)] = arg_values.at(i);
   }
 
   auto result = (*method)(object, params);
@@ -729,7 +737,7 @@ ExprEvaluator::eval_method_call(const atc::MethodCallExpr &expr) {
     return nullptr;
   }
   if (result.size() == 1) {
-    return result[0];
+    return result.front();
   }
   std::vector<typing::RuntimeValue> values;
   values.reserve(result.size());
@@ -760,15 +768,17 @@ typing::RuntimeValue ExprEvaluator::eval_index(const atc::IndexExpr &expr) {
     // Look up GetIndex on the struct's type.
     const atc::StructDecl *struct_decl =
         types_->lookup_struct(instPtr->type_name);
-    if (struct_decl) {
+    if (struct_decl != nullptr) {
       const atc::RoutineDecl *get_index = struct_decl->find_routine("GetIndex");
-      if (get_index) {
+      if (get_index != nullptr) {
         typing::FunctionResult outputs =
             exec_struct_routine(instPtr, *struct_decl, *get_index, {index});
-        if (outputs.empty())
+        if (outputs.empty()) {
           return nullptr;
-        if (outputs.size() == 1)
-          return outputs[0];
+        }
+        if (outputs.size() == 1) {
+          return outputs.front();
+        }
         return std::make_shared<typing::TupleValue>(outputs);
       }
     }
@@ -789,10 +799,12 @@ typing::RuntimeValue ExprEvaluator::eval_index(const atc::IndexExpr &expr) {
       params["this"] = object;
       params["index"] = index;
       auto result = (*ffi_method)(object, params);
-      if (result.empty())
+      if (result.empty()) {
         return nullptr;
-      if (result.size() == 1)
-        return result[0];
+      }
+      if (result.size() == 1) {
+        return result.front();
+      }
       return std::make_shared<typing::TupleValue>(result);
     }
     throw EvaluationError("Type '" + instPtr->type_name +
@@ -858,71 +870,56 @@ typing::RuntimeValue ExprEvaluator::eval_call(const atc::CallExpr &expr) {
   typing::ParameterMap params;
   std::vector<bool> assigned(expr.arguments.size(), false);
 
-  // First: handle required parameters
+  const auto indices = std::views::iota(size_t{0}, expr.arguments.size());
+
+  auto find_matching_arg =
+      [&](const std::string &param_name) -> std::optional<size_t> {
+    if (auto named_it = std::ranges::find_if(
+            indices,
+            [&](size_t idx) {
+              return expr.arguments.at(idx).name == param_name;
+            });
+        named_it != indices.end()) {
+      return *named_it;
+    }
+
+    if (auto pos_it = std::ranges::find_if(
+            indices,
+            [&](size_t idx) {
+              return !expr.arguments.at(idx).name.has_value() &&
+                     !assigned.at(idx);
+            });
+        pos_it != indices.end()) {
+      return *pos_it;
+    }
+
+    return std::nullopt;
+  };
+
+  // 1. Required parameters
   for (const auto &param_spec : sig->parameters) {
     if (!param_spec.required) {
       continue;
     }
 
-    auto named_it = std::find_if(expr.arguments.begin(), expr.arguments.end(),
-                                 [&](const atc::CallArg &arg) {
-                                   return arg.name.has_value() &&
-                                          arg.name.value() == param_spec.name;
-                                 });
-
-    if (named_it != expr.arguments.end()) {
-      size_t idx = std::distance(expr.arguments.begin(), named_it);
-      params[param_spec.name] = evaluate(*named_it->value);
-      assigned[idx] = true;
-      continue;
+    auto idx = find_matching_arg(param_spec.name);
+    if (!idx) {
+      throw EvaluationError("Missing required argument: " + param_spec.name);
     }
 
-    auto pos_it = std::find_if(expr.arguments.begin(), expr.arguments.end(),
-                               [&](const atc::CallArg &arg) {
-                                 size_t idx = &arg - expr.arguments.data();
-                                 return !arg.name.has_value() && !assigned[idx];
-                               });
-
-    if (pos_it != expr.arguments.end()) {
-      size_t idx = std::distance(expr.arguments.begin(), pos_it);
-      params[param_spec.name] = evaluate(*pos_it->value);
-      assigned[idx] = true;
-      continue;
-    }
-
-    throw EvaluationError("Missing required argument: " + param_spec.name);
+    params[param_spec.name] = evaluate(*expr.arguments.at(*idx).value);
+    assigned.at(*idx) = true;
   }
 
-  // Second: handle optional parameters
+  // 2. Optional parameters
   for (const auto &param_spec : sig->parameters) {
     if (param_spec.required) {
       continue;
     }
 
-    auto named_it = std::find_if(expr.arguments.begin(), expr.arguments.end(),
-                                 [&](const atc::CallArg &arg) {
-                                   return arg.name.has_value() &&
-                                          arg.name.value() == param_spec.name;
-                                 });
-
-    if (named_it != expr.arguments.end()) {
-      size_t idx = std::distance(expr.arguments.begin(), named_it);
-      params[param_spec.name] = evaluate(*named_it->value);
-      assigned[idx] = true;
-      continue;
-    }
-
-    auto pos_it = std::find_if(expr.arguments.begin(), expr.arguments.end(),
-                               [&](const atc::CallArg &arg) {
-                                 size_t idx = &arg - expr.arguments.data();
-                                 return !arg.name.has_value() && !assigned[idx];
-                               });
-
-    if (pos_it != expr.arguments.end()) {
-      size_t idx = std::distance(expr.arguments.begin(), pos_it);
-      params[param_spec.name] = evaluate(*pos_it->value);
-      assigned[idx] = true;
-      continue;
+    if (auto idx = find_matching_arg(param_spec.name)) {
+      params[param_spec.name] = evaluate(*expr.arguments.at(*idx).value);
+      assigned.at(*idx) = true;
     }
 
     params[param_spec.name] = nullptr;
@@ -935,7 +932,7 @@ typing::RuntimeValue ExprEvaluator::eval_call(const atc::CallExpr &expr) {
     return nullptr;
   }
   if (result.size() == 1) {
-    return result[0];
+    return result.front();
   }
   return std::make_shared<typing::TupleValue>(result);
 }
@@ -1015,8 +1012,9 @@ ExprEvaluator::apply_binary_op(const std::string &op,
       double r = std::holds_alternative<double>(right)
                      ? std::get<double>(right)
                      : std::get<int64_t>(right);
-      if (r == 0.0)
+      if (r == 0.0) {
         throw EvaluationError("Division by zero");
+      }
       return l / r;
     }
   }

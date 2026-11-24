@@ -38,8 +38,8 @@ private:
   typing::RuntimeValue apply_binary_op(const std::string &op,
                                        const typing::RuntimeValue &left,
                                        const typing::RuntimeValue &right);
-  typing::RuntimeValue apply_unary_op(const std::string &op,
-                                      const typing::RuntimeValue &operand);
+  static typing::RuntimeValue
+  apply_unary_op(const std::string &op, const typing::RuntimeValue &operand);
 
   /**
    * @brief Execute a struct routine (constructor or instance method) in its
