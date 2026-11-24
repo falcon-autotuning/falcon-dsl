@@ -5,6 +5,7 @@
 #include "falcon-dsl/Interpreter.hpp"
 #include "falcon-dsl/TypeRegistry.hpp"
 #include <falcon-typing/PrimitiveTypes.hpp>
+#include <falcon-typing/falcon_ffi.h>
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -12,6 +13,12 @@
 #include <string>
 #include <vector>
 
+struct FalconRuntimeContext {
+  falcon::dsl::TypeRegistry *types;
+  falcon::dsl::FunctionRegistry *routines;
+};
+
+using RuntimeInitFunc = void (*)(const FalconRuntimeAPI *);
 namespace falcon::dsl {
 
 struct RoutineConfig {
@@ -40,8 +47,6 @@ public:
   [[nodiscard]] const atc::AutotunerDecl *
   get_autotuner(const std::string &name) const;
 
-  std::shared_ptr<TypeRegistry> get_type_registry() { return type_registry_; }
-
 private:
   bool process_ff_import(
       const atc::FFImportDecl &ffi, const std::filesystem::path &fal_dir,
@@ -59,6 +64,8 @@ private:
   std::shared_ptr<FunctionRegistry> function_registry_;
   std::shared_ptr<TypeRegistry> type_registry_;
   std::shared_ptr<Interpreter> interpreter_;
+  FalconRuntimeContext runtime_context_;
+  FalconRuntimeAPI runtime_api_;
 
   std::map<std::string, atc::AutotunerDecl> loaded_autotuners_;
   std::map<std::string, atc::RoutineDecl> routine_declarations_;
@@ -84,6 +91,23 @@ private:
   // Map from absolute file path → package root directory
   // Used to resolve FFI wrappers relative to the package
   std::map<std::filesystem::path, std::filesystem::path> package_roots_by_file_;
+
+  // Static connections to type system
+  static int32_t RuntimeEquals(FalconRuntimeContext *context,
+                               const FalconParamEntry *lhs,
+                               const FalconParamEntry *rhs);
+  static int32_t RuntimeNotEquals(FalconRuntimeContext *context,
+                                  const FalconParamEntry *lhs,
+                                  const FalconParamEntry *rhs);
+  static int32_t RuntimeLessThan(FalconRuntimeContext *context,
+                                 const FalconParamEntry *lhs,
+                                 const FalconParamEntry *rhs);
+  static int32_t RuntimeGreaterThan(FalconRuntimeContext *context,
+                                    const FalconParamEntry *lhs,
+                                    const FalconParamEntry *rhs);
+  static void RuntimeDeepCopy(FalconRuntimeContext *context,
+                              const FalconParamEntry *input,
+                              FalconResultSlot *output);
 };
 
 } // namespace falcon::dsl

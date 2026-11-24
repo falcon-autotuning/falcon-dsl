@@ -1022,70 +1022,24 @@ ExprEvaluator::apply_binary_op(const std::string &op,
   }
 
   if (op == "==") {
-    return left == right;
+    return types_->runtime_equals(left, right);
   }
+
   if (op == "!=") {
-    return left != right;
+    return types_->runtime_not_equals(left, right);
   }
   if (op == "<") {
-    if (std::holds_alternative<int64_t>(left) &&
-        std::holds_alternative<int64_t>(right)) {
-      return std::get<int64_t>(left) < std::get<int64_t>(right);
-    }
-    if (std::holds_alternative<double>(left) ||
-        std::holds_alternative<double>(right)) {
-      double l = std::holds_alternative<double>(left) ? std::get<double>(left)
-                                                      : std::get<int64_t>(left);
-      double r = std::holds_alternative<double>(right)
-                     ? std::get<double>(right)
-                     : std::get<int64_t>(right);
-      return l < r;
-    }
+    return types_->runtime_less_than(left, right);
   }
+
   if (op == ">") {
-    if (std::holds_alternative<int64_t>(left) &&
-        std::holds_alternative<int64_t>(right)) {
-      return std::get<int64_t>(left) > std::get<int64_t>(right);
-    }
-    if (std::holds_alternative<double>(left) ||
-        std::holds_alternative<double>(right)) {
-      double l = std::holds_alternative<double>(left) ? std::get<double>(left)
-                                                      : std::get<int64_t>(left);
-      double r = std::holds_alternative<double>(right)
-                     ? std::get<double>(right)
-                     : std::get<int64_t>(right);
-      return l > r;
-    }
+    return types_->runtime_greater_than(left, right);
   }
   if (op == "<=") {
-    if (std::holds_alternative<int64_t>(left) &&
-        std::holds_alternative<int64_t>(right)) {
-      return std::get<int64_t>(left) <= std::get<int64_t>(right);
-    }
-    if (std::holds_alternative<double>(left) ||
-        std::holds_alternative<double>(right)) {
-      double l = std::holds_alternative<double>(left) ? std::get<double>(left)
-                                                      : std::get<int64_t>(left);
-      double r = std::holds_alternative<double>(right)
-                     ? std::get<double>(right)
-                     : std::get<int64_t>(right);
-      return l <= r;
-    }
+    return !types_->runtime_greater_than(left, right);
   }
   if (op == ">=") {
-    if (std::holds_alternative<int64_t>(left) &&
-        std::holds_alternative<int64_t>(right)) {
-      return std::get<int64_t>(left) >= std::get<int64_t>(right);
-    }
-    if (std::holds_alternative<double>(left) ||
-        std::holds_alternative<double>(right)) {
-      double l = std::holds_alternative<double>(left) ? std::get<double>(left)
-                                                      : std::get<int64_t>(left);
-      double r = std::holds_alternative<double>(right)
-                     ? std::get<double>(right)
-                     : std::get<int64_t>(right);
-      return l >= r;
-    }
+    return !types_->runtime_less_than(left, right);
   }
 
   if (op == "&&") {

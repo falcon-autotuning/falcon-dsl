@@ -1,5 +1,6 @@
 #include <falcon-core/physics/device_structures/Connection.hpp>
 #include <falcon-typing/FFIHelpers.hpp>
+#include <fmt/base.h>
 
 using namespace falcon::typing;
 using namespace falcon::typing::ffi::wrapper;
@@ -139,7 +140,7 @@ void STRUCTConnectionIsOhmic(const FalconParamEntry *params,
 void STRUCTConnectionIsGate(const FalconParamEntry *params, int32_t param_count,
                             FalconResultSlot *out, int32_t *out_count) {
   ConnectionSP conn = get_opaque<Connection>(params, param_count, "this");
-  pack_results(FunctionResult{conn->is_gate()}, out, 16, out_count);
+  pack_single(conn->is_gate(), out, out_count);
 }
 
 // Equal(this: Connection, other: Connection) -> (bool)
@@ -147,16 +148,22 @@ void STRUCTConnectionEqual(const FalconParamEntry *params, int32_t param_count,
                            FalconResultSlot *out, int32_t *out_count) {
   ConnectionSP conn = get_opaque<Connection>(params, param_count, "this");
   ConnectionSP other = get_opaque<Connection>(params, param_count, "other");
-  pack_results(FunctionResult{conn == other}, out, 16, out_count);
+  pack_results(FunctionResult{*conn == *other}, out, 16, out_count);
 }
 
 // NotEqual(this: Connection, other: Connection) -> (bool)
 void STRUCTConnectionNotEqual(const FalconParamEntry *params,
                               int32_t param_count, FalconResultSlot *out,
                               int32_t *out_count) {
+
+  auto pm = unpack_params(params, param_count);
+
+  for (auto const &[k, v] : pm) {
+    fmt::print("PARAM: {}\n", k);
+  }
   ConnectionSP conn = get_opaque<Connection>(params, param_count, "this");
   ConnectionSP other = get_opaque<Connection>(params, param_count, "other");
-  pack_results(FunctionResult{conn != other}, out, 16, out_count);
+  pack_results(FunctionResult{*conn != *other}, out, 16, out_count);
 }
 
 } // namespace

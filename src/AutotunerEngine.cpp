@@ -12,12 +12,64 @@
 #include <openssl/sha.h>
 
 namespace falcon::dsl {
+int32_t AutotunerEngine::RuntimeEquals(FalconRuntimeContext *context,
+                                       const FalconParamEntry *lhs,
+                                       const FalconParamEntry *rhs) {
+
+  auto lhs_value = typing::ffi::unpack_value(*lhs);
+
+  auto rhs_value = typing::ffi::unpack_value(*rhs);
+
+  return context->types->runtime_equals(lhs_value, rhs_value) ? 1 : 0;
+}
+int32_t AutotunerEngine::RuntimeNotEquals(FalconRuntimeContext *context,
+                                          const FalconParamEntry *lhs,
+                                          const FalconParamEntry *rhs) {
+
+  auto lhs_value = typing::ffi::unpack_value(*lhs);
+
+  auto rhs_value = typing::ffi::unpack_value(*rhs);
+
+  return context->types->runtime_not_equals(lhs_value, rhs_value) ? 1 : 0;
+}
+int32_t AutotunerEngine::RuntimeLessThan(FalconRuntimeContext *context,
+                                         const FalconParamEntry *lhs,
+                                         const FalconParamEntry *rhs) {
+
+  auto lhs_value = typing::ffi::unpack_value(*lhs);
+
+  auto rhs_value = typing::ffi::unpack_value(*rhs);
+
+  return context->types->runtime_less_than(lhs_value, rhs_value) ? 1 : 0;
+}
+int32_t AutotunerEngine::RuntimeGreaterThan(FalconRuntimeContext *context,
+                                            const FalconParamEntry *lhs,
+                                            const FalconParamEntry *rhs) {
+
+  auto lhs_value = typing::ffi::unpack_value(*lhs);
+
+  auto rhs_value = typing::ffi::unpack_value(*rhs);
+
+  return context->types->runtime_greater_than(lhs_value, rhs_value) ? 1 : 0;
+}
+void AutotunerEngine::RuntimeDeepCopy(FalconRuntimeContext *context,
+                                      const FalconParamEntry *input,
+                                      FalconResultSlot *output) {
+
+  auto value = typing::ffi::unpack_value(*input);
+
+  auto copied = context->types->runtime_deep_copy(value);
+
+  typing::ffi::pack_value(copied, output[0]);
+}
+
 std::string
 AutotunerEngine::compute_file_hash(const std::filesystem::path &path) {
   // Reuse the PackageCache sha256 if accessible, otherwise inline:
   std::ifstream f(path, std::ios::binary);
-  if (!f)
+  if (!f) {
     return "00000000000000000000000000000000";
+  }
   std::ostringstream ss;
   ss << std::hex;
   // Simple djb2-style hash for cache keying (not cryptographic, just stable)
@@ -35,6 +87,17 @@ AutotunerEngine::AutotunerEngine() {
   type_registry_ = TypeRegistry::create_default();
   interpreter_ =
       std::make_shared<Interpreter>(function_registry_, type_registry_);
+
+  runtime_context_.types = type_registry_.get();
+  runtime_context_.routines = function_registry_.get();
+
+  runtime_api_.context = &runtime_context_;
+
+  runtime_api_.equals = &RuntimeEquals;
+  runtime_api_.not_equals = &RuntimeNotEquals;
+  runtime_api_.less_than = &RuntimeLessThan;
+  runtime_api_.greater_than = &RuntimeGreaterThan;
+  runtime_api_.deep_copy = &RuntimeDeepCopy;
 }
 
 // ---------------------------------------------------------------------------
@@ -149,7 +212,8 @@ bool AutotunerEngine::load_fal_file(const std::string &fal_file_path) {
     for (auto &autotuner : program->autotuners) {
       autotuner.module_name = program->module_name;
       log::info("  - Autotuner: " + autotuner.name);
-      std::string name_key = autotuner.is_mock ? "mock::" + autotuner.name : autotuner.name;
+      std::string name_key =
+          autotuner.is_mock ? "mock::" + autotuner.name : autotuner.name;
       std::string qname = autotuner.module_name.empty()
                               ? name_key
                               : autotuner.module_name + "::" + name_key;
@@ -442,7 +506,8 @@ AutotunerEngine::get_autotuner(const std::string &name) const {
 
 void AutotunerEngine::register_autotuner_as_function(
     const atc::AutotunerDecl &autotuner) {
-  std::string name_to_register = autotuner.is_mock ? "mock::" + autotuner.name : autotuner.name;
+  std::string name_to_register =
+      autotuner.is_mock ? "mock::" + autotuner.name : autotuner.name;
   std::string qname = autotuner.module_name.empty()
                           ? name_to_register
                           : autotuner.module_name + "::" + name_to_register;
@@ -473,8 +538,10 @@ void AutotunerEngine::register_autotuner_as_function(
 
   // Register qualified name if module is known
   if (!autotuner.module_name.empty()) {
-    std::string qname_registered = autotuner.module_name + "::" + name_to_register;
-    atc::BuiltinSignature q_sig(qname_registered, std::move(params), std::move(returns));
+    std::string qname_registered =
+        autotuner.module_name + "::" + name_to_register;
+    atc::BuiltinSignature q_sig(qname_registered, std::move(params),
+                                std::move(returns));
     function_registry_->register_autotuner(q_sig, func);
     log::debug(fmt::format("Loaded autotuner: {}", qname_registered));
   } else {
@@ -684,6 +751,13 @@ bool AutotunerEngine::process_ff_import(
   if (dl_handle == nullptr) {
     log::error("Failed to dlopen FFI wrapper: " + std::string(dlerror()));
     return false;
+  }
+  if (auto *init = reinterpret_cast<RuntimeInitFunc>(
+          dlsym(dl_handle, "FalconRuntimeInit"))) {
+    init(&runtime_api_);
+
+    log::debug(
+        fmt::format("Initialized Falcon runtime API for {}", so_path.string()));
   }
   ffi_handles_.push_back(dl_handle);
 

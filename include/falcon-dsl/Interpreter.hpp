@@ -34,7 +34,9 @@ public:
   /**
    * @brief Get current variable environment (for debugging).
    */
-  const typing::ParameterMap &get_variables() const { return variables_; }
+  [[nodiscard]] const typing::ParameterMap &get_variables() const {
+    return variables_;
+  }
 
 private:
   void initialize_variables(const atc::AutotunerDecl &autotuner);

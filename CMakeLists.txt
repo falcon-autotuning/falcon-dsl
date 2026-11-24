@@ -29,6 +29,7 @@ find_package(falcon-typing CONFIG REQUIRED)
 find_package(falcon-package-manager CONFIG REQUIRED)
 find_package(fmt           CONFIG REQUIRED)
 find_package(OpenSSL       CONFIG REQUIRED)
+find_package(boost_container_hash CONFIG REQUIRED)
 
 # 1. Compiler sub-project
 add_subdirectory(compiler)
@@ -60,6 +61,7 @@ target_link_libraries(falcon-dsl
     falcon::falcon-package-manager
     fmt::fmt
     OpenSSL::SSL
+    Boost::container_hash
 )
 
 # ── 4. CLI tool (falcon-run) ─────────────────────────────────────────────────
