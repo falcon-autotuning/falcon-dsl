@@ -271,3 +271,120 @@ TEST_F(ForeignFunctionTest, InferEqualFromNotEqualNativeStruct) {
 
   EXPECT_TRUE(std::get<bool>(outputs[0]));
 }
+
+TEST_F(ForeignFunctionTest, RuntimeEqualityFallsBackToStructFields) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/foreign_function/"
+                            "runtime-native-struct-equality.fal"),
+      "RuntimeNativeStructEquality", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}
+
+TEST_F(ForeignFunctionTest, RuntimeNotEqualityFallsBackToStructFields) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/foreign_function/"
+                            "runtime-native-struct-notequality.fal"),
+      "RuntimeNativeStructNotEquality", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}
+
+TEST_F(ForeignFunctionTest, RuntimeNativeStructError) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/foreign_function/"
+                            "runtime-native-struct-error.fal"),
+      "RuntimeNativeStructError", params, false};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_FALSE(success);
+}
+
+TEST_F(ForeignFunctionTest, RuntimeNativeDeepCopyOverride) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/runtime-native-deepcopy.fal"),
+      "RuntimeNativeDeepCopyTest", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 2u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 25);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[1]), 10);
+}
+
+TEST_F(ForeignFunctionTest, RuntimeMixedStructDeepCopyOverride) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/mixed-deepcopy.fal"),
+      "MixedDeepCopyTest", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 2u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 99);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[1]), 5);
+}
+
+TEST_F(ForeignFunctionTest, ModifyDeepCopy) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/modify-falcon-deepcopy.fal"),
+      "ModifyDeepCopyTest", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 2u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 88);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[1]), 11);
+}
+
+TEST_F(ForeignFunctionTest, PureFalconStructDeepCopyFallback) {
+  ParameterMap params;
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path(
+          "test-autotuners/foreign_function/pure-falcon-deepcopy.fal"),
+      "PureFalconDeepCopyTest", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 2u);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[0]), 88);
+
+  EXPECT_EQ(std::get<int64_t>(outputs[1]), 11);
+}

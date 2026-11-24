@@ -1,0 +1,39 @@
+ffimport "MixedDeepCopyW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
+
+struct MixedPoint {
+    int x;
+    int y;
+
+    routine DeepCopy -> (MixedPoint copy)
+}
+
+autotuner MixedDeepCopyTest()
+    -> (int original, int copied) {
+
+    original = 0;
+    copied = 0;
+
+    start -> run;
+
+    state run {
+
+        MixedPoint p;
+
+        p.x = 5;
+        p.y = 10;
+
+        MixedPoint copy =
+            p.DeepCopy();
+
+        p.x = 99;
+
+        original = p.x;
+        copied = copy.x;
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}

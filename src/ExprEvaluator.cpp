@@ -851,6 +851,13 @@ typing::RuntimeValue ExprEvaluator::eval_call(const atc::CallExpr &expr) {
     func = functions_->lookup(resolved_name);
   }
   if (func == nullptr) {
+    if (expr.name == "DeepCopy") {
+      if (expr.arguments.size() != 1) {
+        throw EvaluationError("DeepCopy expects exactly one argument");
+      }
+      auto value = evaluate(*expr.arguments.front().value);
+      return types_->runtime_deep_copy(value);
+    }
     throw EvaluationError("Unknown function: " + expr.name);
   }
 

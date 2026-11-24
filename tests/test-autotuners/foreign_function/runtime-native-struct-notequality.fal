@@ -1,0 +1,39 @@
+ffimport "ComparePointW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
+
+struct Point {
+    int x;
+    int y;
+}
+
+routine CompareNotEqual(
+    Point a,
+    Point b
+) -> (bool neq)
+
+autotuner RuntimeNativeStructNotEquality()
+    -> (bool neq) {
+
+    neq = false;
+
+    start -> run;
+
+    state run {
+
+        Point p1;
+        Point p2;
+
+        p1.x = 1;
+        p1.y = 2;
+
+        p2.x = 3;
+        p2.y = 4;
+
+        neq = CompareNotEqual(p1, p2);
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}

@@ -183,8 +183,6 @@ private:
   bool values_not_equal(const std::shared_ptr<typing::TupleValue> &lhs,
                         const std::shared_ptr<typing::TupleValue> &rhs,
                         CycleGuard &guard) const;
-
-  void register_all_type_methods(TypeRegistry &registry);
 };
 
 } // namespace falcon::dsl

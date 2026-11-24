@@ -1,0 +1,37 @@
+ffimport "RuntimeDeepCopyW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
+
+struct NativeCounter {
+    routine New(int value) -> (NativeCounter out)
+    routine DeepCopy -> (NativeCounter copy)
+    routine Set(int value) -> ()
+    routine Get -> (int value)
+}
+
+autotuner RuntimeNativeDeepCopyTest()
+    -> (int original, int copied) {
+
+    original = 0;
+    copied = 0;
+
+    start -> run;
+
+    state run {
+
+        NativeCounter a =
+            NativeCounter.New(10);
+
+        NativeCounter b =
+            a.DeepCopy();
+
+        a.Set(25);
+
+        original = a.Get();
+        copied = b.Get();
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}

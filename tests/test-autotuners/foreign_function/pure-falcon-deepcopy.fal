@@ -1,0 +1,35 @@
+struct Point {
+    int x;
+    int y;
+}
+
+autotuner PureFalconDeepCopyTest()
+    -> (int original, int copied) {
+
+    original = 0;
+    copied = 0;
+
+    start -> run;
+
+    state run {
+
+        Point p;
+
+        p.x = 11;
+        p.y = 22;
+
+        Point copy =
+            DeepCopy(p);
+
+        p.x = 88;
+
+        original = p.x;
+        copied = copy.x;
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}

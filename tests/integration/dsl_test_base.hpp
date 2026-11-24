@@ -126,7 +126,7 @@ protected:
     bool result = autotuner_result;
     std::vector<typing::RuntimeValue> output;
     {
-      std::lock_guard<std::mutex> lock(result_mutex);
+      std::scoped_lock lock(result_mutex);
       output = autotuner_output;
     }
 

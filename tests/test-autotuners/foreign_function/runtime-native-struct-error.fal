@@ -1,0 +1,39 @@
+ffimport "ComparePointErrorW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
+
+struct Point {
+    int x;
+    int y;
+}
+
+routine CompareEqual(
+    Point a,
+    Point b
+) -> (bool equal)
+
+autotuner RuntimeNativeStructError()
+    -> (bool equal) {
+
+    equal = false;
+
+    start -> run;
+
+    state run {
+
+        Point p1;
+        Point p2;
+
+        p1.x = 5;
+        p1.y = 10;
+
+        p2.x = 5;
+        p2.y = 10;
+
+        equal = CompareEqual(p1, p2);
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}
