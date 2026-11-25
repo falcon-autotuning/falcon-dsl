@@ -515,3 +515,75 @@ TEST_F(ForeignFunctionTest, NestedDeepCopySplitLibraries) {
 
   EXPECT_TRUE(std::get<bool>(outputs[0]));
 }
+
+TEST_F(ForeignFunctionTest, GenericRuntimeValueDeepCopy) {
+  ParameterMap params;
+
+  params["value"] = static_cast<int64_t>(10);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/foreign_function/"
+                            "box-deepcopy-wrapper.fal"),
+      "NestedGenericDeepCopy", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1u);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}
+
+TEST_F(ForeignFunctionTest, NestedGenericRuntimeValueDeepCopy) {
+  ParameterMap params;
+
+  params["value"] = static_cast<int64_t>(10);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/foreign_function/"
+                            "box-nested-generic-deepcopy.fal"),
+      "BoxNestedGenericDeepCopy", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1U);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}
+
+TEST_F(ForeignFunctionTest, PairGenericDeepCopy) {
+  ParameterMap params;
+
+  params["value"] = static_cast<int64_t>(10);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/foreign_function/"
+                            "doubly-generic-deepcopy.fal"),
+      "PairBoxGenericDeepCopy", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1U);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}
+
+TEST_F(ForeignFunctionTest, DoublyPairGenericDeepCopy) {
+  ParameterMap params;
+
+  params["value"] = static_cast<int64_t>(10);
+
+  SingleCompileEnvironment cenv{
+      std::filesystem::path("test-autotuners/foreign_function/"
+                            "nested-doubly-generic-deepcopy.fal"),
+      "PairBoxDoublyGenericDeepCopy", params, true};
+
+  auto [success, outputs] = compile_and_run(cenv);
+
+  ASSERT_TRUE(success);
+  ASSERT_EQ(outputs.size(), 1U);
+
+  EXPECT_TRUE(std::get<bool>(outputs[0]));
+}

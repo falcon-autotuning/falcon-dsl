@@ -1,0 +1,73 @@
+
+ffimport "PairBoxCopyW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/")
+                              ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
+struct SingleBox<T> {
+    routine New(T value) -> (SingleBox<T> box)
+    routine DeepCopy() -> (SingleBox<T> box)
+    routine Equal(SingleBox<T> other) -> (bool equal)
+    routine Update(T value) -> ()
+}
+
+struct PairBox<K, V> {
+    routine New(K key, V value) -> (PairBox<K, V> box)
+    routine Equal(PairBox<K, V> other) -> (bool equal)
+    routine DeepCopy() -> (PairBox<K, V> box)
+    routine Update(K key, V value) -> ()
+}
+
+struct Holder {
+    PairBox<
+        SingleBox<int>,
+        SingleBox<SingleBox<int>>
+    > value_;
+
+    routine New(
+        PairBox<
+            SingleBox<int>,
+            SingleBox<SingleBox<int>>
+        > value
+    ) -> (Holder h) {
+        h.value_ = value;
+    }
+}
+
+autotuner PairBoxDoublyGenericDeepCopy(
+    int value
+) -> (bool success) {
+
+    success = false;
+
+    start -> run;
+
+    state run {
+
+        Holder h =
+            Holder.New(
+                PairBox.New(
+                    SingleBox.New(value),
+                    SingleBox.New(
+                        SingleBox.New(value + 1)
+                    )
+                )
+            );
+
+        Holder copy =
+            h.DeepCopy();
+
+        copy.value_.Update(
+            SingleBox.New(value + 10),
+            SingleBox.New(
+                SingleBox.New(value + 20)
+            )
+        );
+
+        success =
+            (copy != h);
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}

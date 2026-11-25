@@ -1,0 +1,45 @@
+ffimport "IntBoxCopyW.cpp" ("-I../../../vcpkg_installed/x64-linux-dynamic/include/") ("-L../../../vcpkg_installed/x64-linux-dynamic/lib")
+
+struct IntBox<T> {
+    routine New(T value) -> (IntBox<T> box)
+    routine Equal(IntBox<T> other) -> (bool equal)
+    routine DeepCopy() -> (IntBox<T> box)
+    routine UpdateValue(T value) -> ()
+}
+
+struct Holder {
+    IntBox<int> value_;
+
+    routine New(IntBox<int> value) -> (Holder h) {
+        h.value_= value;
+    }
+}
+
+autotuner NestedGenericDeepCopy(
+    int value
+) -> (bool success) {
+
+    success = false;
+
+    start -> run;
+
+    state run {
+
+        Holder h =
+            Holder.New(
+                IntBox.New(value)
+            );
+
+        Holder copy = h.DeepCopy();
+        copy.value_.UpdateValue(value + 5);
+
+        success =
+            (copy != h);
+
+        -> done;
+    }
+
+    state done {
+        terminal;
+    }
+}
